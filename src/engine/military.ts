@@ -1,6 +1,5 @@
 import {
   ATTACK_STRENGTH,
-  ATTACKER_ATTRITION,
   CASUS_BELLI_MORALE,
   DEFENSE_STRENGTH,
   ENTRENCH_BONUS,
@@ -13,8 +12,6 @@ import {
   PALACE_DEFENSE_MAX,
   TRAINING_MAX,
   TRAINING_MIN,
-  WAR_DEVASTATION,
-  WAR_GUILT_SCANDALS,
 } from './constants';
 import { builtLand, fiefLandRequired } from './economy';
 import { randFloat } from './rng';
@@ -140,26 +137,17 @@ export function resolveAttack(s: GameState, a: AttackAction, awayFractions: Reco
   const loser = attackerWon ? def : att;
   const winnerUnits = attackerWon ? sent : homeUnits;
   const loserUnits = attackerWon ? homeUnits : sent;
-  // Der Angreifer stürmt feindliche Stellungen und blutet stärker (ATTACKER_ATTRITION).
-  const winnerRate = (0.1 + 0.1 * (1 - severity)) * (attackerWon ? ATTACKER_ATTRITION : 1);
-  const loserRate = Math.min(0.9, (0.3 + 0.2 * severity) * (attackerWon ? 1 : ATTACKER_ATTRITION));
-  const winnerLost = applyCasualties(winner.military, winnerUnits, winnerRate);
-  const loserLost = applyCasualties(loser.military, loserUnits, loserRate);
+  const winnerLost = applyCasualties(winner.military, winnerUnits, 0.1 + 0.1 * (1 - severity));
+  const loserLost = applyCasualties(loser.military, loserUnits, 0.3 + 0.2 * severity);
 
   // Verlierer büßt Land und Bargeld ein.
   const land = Math.max(0, Math.min(Math.round(loser.land * landPct), loser.land - MIN_LAND_AFTER_BATTLE));
   const gold = Math.round(Math.max(0, loser.gold) * goldPct);
   const destroyed = loseLand(loser, land);
-  // Ein Teil des abgetretenen Landes ist verwüstetes Niemandsland.
-  const gained = Math.round(land * (1 - WAR_DEVASTATION));
-  winner.land += gained;
+  winner.land += land;
   loser.gold -= gold;
   winner.gold += gold;
   if (hasCb) att.casusBelli = att.casusBelli.filter((id) => id !== def.id);
-  else if (WAR_GUILT_SCANDALS > 0) {
-    att.scandals += WAR_GUILT_SCANDALS;
-    tell(s, att.id, 'Empörung im Reich', `Euer unprovozierter Angriff auf ${def.name} empört die Kirchenfürsten (Skandal).`, 'warning');
-  }
 
   def.grudges[att.id] = (def.grudges[att.id] ?? 0) + GRUDGE.attack;
 
@@ -169,7 +157,7 @@ export function resolveAttack(s: GameState, a: AttackAction, awayFractions: Reco
       s,
       att.id,
       'Sieg auf dem Schlachtfeld!',
-      `Euer Heer hat ${def.name} geschlagen${hasCb ? ' (gerechter Rachefeldzug)' : ''}. Beute: ${fmt(gained)} ha Land${gained < land ? ` (${fmt(land - gained)} ha sind verwüstet)` : ''} und ${fmt(gold)} Taler. Eure Verluste: ${lossText(winnerLost)}.`,
+      `Euer Heer hat ${def.name} geschlagen${hasCb ? ' (gerechter Rachefeldzug)' : ''}. Beute: ${fmt(land)} ha Land und ${fmt(gold)} Taler. Eure Verluste: ${lossText(winnerLost)}.`,
       'good',
     );
     tell(
@@ -179,7 +167,7 @@ export function resolveAttack(s: GameState, a: AttackAction, awayFractions: Reco
       `${att.name} hat Euer Land überfallen und gesiegt. Ihr verliert ${fmt(land)} ha Land und ${fmt(gold)} Taler.${destroyedText} Verluste: ${lossText(loserLost)}.`,
       'error',
     );
-    chronicle(s, `${att.name} besiegt ${def.name} und erobert ${fmt(gained)} ha.`);
+    chronicle(s, `${att.name} besiegt ${def.name} und erobert ${fmt(land)} ha.`);
   } else {
     tell(
       s,
@@ -192,7 +180,7 @@ export function resolveAttack(s: GameState, a: AttackAction, awayFractions: Reco
       s,
       def.id,
       'Angriff abgewehrt!',
-      `${att.name} hat Euch angegriffen, doch Eure Truppen haben gesiegt. Ihr erhaltet ${fmt(gained)} ha Land und ${fmt(gold)} Taler Reparationen. Verluste: ${lossText(winnerLost)}.`,
+      `${att.name} hat Euch angegriffen, doch Eure Truppen haben gesiegt. Ihr erhaltet ${fmt(land)} ha Land und ${fmt(gold)} Taler Reparationen. Verluste: ${lossText(winnerLost)}.`,
       'good',
     );
     chronicle(s, `${def.name} schlägt den Angriff von ${att.name} zurück.`);

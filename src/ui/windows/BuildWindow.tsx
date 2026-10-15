@@ -3,7 +3,10 @@ import {
   BUILDINGS,
   CITY_MARKETS,
   CITY_MILLS,
+  CITY_BONUS_FULL_CITIES,
   CITY_TAX_BONUS,
+  CITY_TAX_BONUS_LATE,
+  cityBonusFactor,
   cityCount,
   freeLand,
   HECTARES_PER_BUILDING,
@@ -71,9 +74,9 @@ export function BuildWindow() {
         </table>
       </div>
 
-      <GroupBox label={`Städte: ${cities} (+${Math.round(cities * CITY_TAX_BONUS * 100)} % Steuern)`}>
+      <GroupBox label={`Städte: ${cities} (+${Math.round(cityBonusFactor(me.buildings) * 100)} % Steuern)`}>
         <div className="hint" style={{ marginTop: 0 }}>
-          {CITY_MARKETS} Märkte + {CITY_MILLS} Mühlen verschmelzen automatisch zu einer Stadt. Jede Stadt bringt +{CITY_TAX_BONUS * 100} % auf alle Steuern.
+          {CITY_MARKETS} Märkte + {CITY_MILLS} Mühlen verschmelzen automatisch zu einer Stadt. Die ersten {CITY_BONUS_FULL_CITIES} Städte bringen je +{CITY_TAX_BONUS * 100} % auf alle Steuern, jede weitere +{CITY_TAX_BONUS_LATE * 100} %.
         </div>
         <div className="two-col">
           <div>

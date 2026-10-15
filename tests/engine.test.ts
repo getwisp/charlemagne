@@ -4,6 +4,7 @@ import {
   ActionError,
   ARCHETYPES,
   calculateTaxes,
+  cityBonusFactor,
   pilgrimIncome,
   tradeRetention,
   blockerBoost,
@@ -47,6 +48,13 @@ describe('Wirtschaft', () => {
     expect(cityCount({ market: 9, mill: 3, granary: 0, palace: 0, cathedral: 0 })).toBe(1);
     expect(cityCount({ market: 10, mill: 6, granary: 0, palace: 0, cathedral: 0 })).toBe(2);
     expect(cityCount({ market: 4, mill: 30, granary: 0, palace: 0, cathedral: 0 })).toBe(0);
+  });
+
+  it('Stadt-Bonus: drei Städte voll (+10 %), jede weitere +5 %', () => {
+    const b = (cities: number) => ({ market: 5 * cities, mill: 3 * cities, granary: 0, palace: 0, cathedral: 0 });
+    expect(cityBonusFactor(b(1))).toBeCloseTo(0.1);
+    expect(cityBonusFactor(b(3))).toBeCloseTo(0.3);
+    expect(cityBonusFactor(b(5))).toBeCloseTo(0.4);
   });
 
   it('calculateEconomyTurn ist rein und reagiert auf die Ration', () => {

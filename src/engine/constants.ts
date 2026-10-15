@@ -1,4 +1,4 @@
-import type { Archetype, BuildingType, CovertMission, RecruitableUnit, Weather } from './types';
+import type { Archetype, BuildingType, RecruitableUnit, Weather } from './types';
 
 export const TITLES = [
   'Edler',
@@ -111,15 +111,12 @@ export const BUILDINGS: Record<
 export const CITY_MARKETS = 5;
 export const CITY_MILLS = 3;
 export const CITY_TAX_BONUS = 0.1;
-/** Ab dieser Stadt bringt jede weitere nur noch CITY_TAX_BONUS_LATE (Infinity = immer voller Bonus). */
-export const CITY_BONUS_FULL_CITIES = Infinity;
+/**
+ * Verwaltungsaufwand großer Reiche: Die ersten drei Städte bringen je +10 % auf alle Steuern,
+ * jede weitere nur noch +5 %.
+ */
+export const CITY_BONUS_FULL_CITIES = 3;
 export const CITY_TAX_BONUS_LATE = 0.05;
-/** Obergrenze des gesamten Stadt-Bonus (Infinity = ohne Deckel). */
-export const CITY_BONUS_CAP = Infinity;
-/** Stadt-Bonus nur auf Mehrwertsteuer und Zölle statt auf alle Steuern. */
-export const CITY_BONUS_TRADE_ONLY = false;
-/** Einwohner, die ein Markt oder eine Mühle für volle Auslastung braucht (0 = keine Kopplung). */
-export const CITIZENS_PER_TRADE_BUILDING = 0;
 
 // ---------------------------------------------------------------- Steuern
 export const TAX_LIMITS = { income: 50, sales: 30, tolls: 30 } as const;
@@ -188,12 +185,6 @@ export const PALACE_DEFENSE = 0.1;
 export const PALACE_DEFENSE_MAX = 0.5;
 export const ENTRENCH_BONUS = 0.25;
 export const CASUS_BELLI_MORALE = 0.25;
-/** Unprovozierter Angriffskrieg (ohne Casus Belli) gilt als Skandal – die Kirchenfürsten sind empört. */
-export const WAR_GUILT_SCANDALS = 0;
-/** Anteil des eroberten Landes, der als verwüstetes Niemandsland verloren geht. */
-export const WAR_DEVASTATION = 0;
-/** Multiplikator für die Truppenverluste des Angreifers (Sturm auf feindliche Stellungen). */
-export const ATTACKER_ATTRITION = 1;
 /** Land, das einem Verlierer nach einer Schlacht mindestens bleibt (Reichsfrieden). */
 export const MIN_LAND_AFTER_BATTLE = 5000;
 
@@ -233,8 +224,6 @@ export const COVERT: Record<
 export const COVERT_BASE_DEFENSE = 100;
 export const COVERT_DEFENSE_PER_GUARD = 15;
 export const COVERT_MIN_GOLD = 100;
-/** Missionen, deren Enttarnung dem Opfer einen Casus Belli verschafft. Bei den übrigen bleibt es bei Groll und Skandal. */
-export const CASUS_BELLI_MISSIONS: readonly CovertMission[] = ['spy', 'rob', 'sabotage', 'assassinate'];
 /** Raub: Anteil des Bargelds in der Schatzkammer */
 export const ROB_CASH_SHARE = [0.1, 0.25] as const;
 /**

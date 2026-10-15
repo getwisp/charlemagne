@@ -5,10 +5,7 @@ import {
   BUILDINGS,
   CITY_MARKETS,
   CITY_MILLS,
-  CITIZENS_PER_TRADE_BUILDING,
-  CITY_BONUS_CAP,
   CITY_BONUS_FULL_CITIES,
-  CITY_BONUS_TRADE_ONLY,
   CITY_TAX_BONUS,
   CITY_TAX_BONUS_LATE,
   FIEF_HECTARES,
@@ -152,30 +149,22 @@ export function tradeRetention(ratePct: number): number {
   return Math.max(0, 1 - TRADE_EVASION * (t * t - TRADE_TAX_REFERENCE * TRADE_TAX_REFERENCE));
 }
 
-/** Stadt-Bonus als Faktor (0,1 = +10 %), je nach Bonus-Modell. */
+/** Stadt-Bonus als Faktor (0,1 = +10 %): volle Wirkung für die ersten Städte, danach abnehmend. */
 export function cityBonusFactor(b: Buildings): number {
   let f = 0;
   for (let k = 1; k <= cityCount(b); k++) f += k <= CITY_BONUS_FULL_CITIES ? CITY_TAX_BONUS : CITY_TAX_BONUS_LATE;
-  return Math.min(CITY_BONUS_CAP, f);
-}
-
-/** Auslastung von Märkten und Mühlen: ohne genug Einwohner bleiben Stände leer (Geisterstädte). */
-export function tradeStaffing(p: Pick<Player, 'population' | 'buildings'>): number {
-  const n = p.buildings.market + p.buildings.mill;
-  if (CITIZENS_PER_TRADE_BUILDING <= 0 || n === 0) return 1;
-  return Math.min(1, p.population / (n * CITIZENS_PER_TRADE_BUILDING));
+  return f;
 }
 
 export function calculateTaxes(p: Pick<Player, 'population' | 'buildings' | 'land' | 'taxes' | 'justice'>): TaxBreakdown {
   const incomeTax = p.population * INCOME_PER_CITIZEN * (p.taxes.income / 100);
-  const staffing = tradeStaffing(p);
   const salesVolume =
-    p.population * SALES_PER_CITIZEN + (p.buildings.market * SALES_PER_MARKET + p.buildings.mill * SALES_PER_MILL) * staffing;
+    p.population * SALES_PER_CITIZEN + p.buildings.market * SALES_PER_MARKET + p.buildings.mill * SALES_PER_MILL;
   const salesTax = salesVolume * tradeRetention(p.taxes.sales) * (p.taxes.sales / 100);
-  const tollVolume = p.buildings.market * TOLLS_PER_MARKET * staffing + p.land * TOLLS_PER_HECTARE;
+  const tollVolume = p.buildings.market * TOLLS_PER_MARKET + p.land * TOLLS_PER_HECTARE;
   const tolls = tollVolume * tradeRetention(p.taxes.tolls) * (p.taxes.tolls / 100);
   const gross = incomeTax + salesTax + tolls;
-  const cityBonus = (CITY_BONUS_TRADE_ONLY ? salesTax + tolls : gross) * cityBonusFactor(p.buildings);
+  const cityBonus = gross * cityBonusFactor(p.buildings);
   const crimeLoss = (gross + cityBonus) * JUSTICE_CRIME[p.justice - 1];
   return {
     incomeTax: Math.round(incomeTax),

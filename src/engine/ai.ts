@@ -29,7 +29,6 @@ import {
   freeLand,
   grainNeed,
   loanPaymentsDue,
-  tradeStaffing,
   militaryUpkeep,
   score,
 } from './economy';
@@ -130,7 +129,6 @@ export function planAiTurn(state: GameState, playerId: string): GameState {
 
   setPolicies(s, p, w);
   survival(s, p, arch.ration);
-  if (RAENKE_DETERRENCE && p.archetype === 'raenkeschmiedin' && s.year > s.startYear) deterrence(s, p);
   speculation(s, p, w);
   // Die Ränkeschmiedin bezahlt ihre Agenten, bevor der Rest in Titel fließt.
   if (p.archetype === 'raenkeschmiedin' && s.year > s.startYear) leaderIntrigue(s, p, w);
@@ -366,11 +364,6 @@ function knightPipeline(s: GameState, p: Player, wanted: number, spend: number):
 }
 
 // ------------------------------------------------------------ Utility-Investitionen
-/** Auslastung nach dem Bau eines weiteren Markts oder einer Mühle (mind. 0,2, damit Städte erreichbar bleiben). */
-function nextTradeStaffing(p: Player): number {
-  return Math.max(0.2, tradeStaffing({ ...p, buildings: { ...p.buildings, market: p.buildings.market + 1 } }));
-}
-
 interface Option {
   name: string;
   utility: number; // 0–100
@@ -388,9 +381,8 @@ function generalInvestments(s: GameState, p: Player, w: Weights): void {
     const landUtility = deficitShare > 0.1 ? 50 + Math.min(40, deficitShare * 60) : freeLand(p) < farmlandTarget(p) ? 45 : 20;
     const hasOpenGoal = nextTitleRequirements(p).some((r) => !r.met);
     const options: Option[] = [
-      // Die KI kennt die Auslastung: In menschenleeren Städten bringt ein weiterer Stand wenig.
-      { name: 'Markt', utility: 60 * nextTradeStaffing(p), weight: w.economy * blockerBoost(p, ['market', 'cities']), run: () => tryBuild(s, p, 'market', spend) },
-      { name: 'Mühle', utility: (p.buildings.mill * CITY_MARKETS < p.buildings.market * CITY_MILLS ? 62 : 45) * nextTradeStaffing(p), weight: w.economy * blockerBoost(p, ['mill', 'cities']), run: () => tryBuild(s, p, 'mill', spend) },
+      { name: 'Markt', utility: 60, weight: w.economy * blockerBoost(p, ['market', 'cities']), run: () => tryBuild(s, p, 'market', spend) },
+      { name: 'Mühle', utility: p.buildings.mill * CITY_MARKETS < p.buildings.market * CITY_MILLS ? 62 : 45, weight: w.economy * blockerBoost(p, ['mill', 'cities']), run: () => tryBuild(s, p, 'mill', spend) },
       { name: 'Kornspeicher', utility: ratRisk && p.buildings.granary < 3 ? 50 : 5, weight: w.economy, run: () => tryBuild(s, p, 'granary', spend) },
       { name: 'Land', utility: landUtility, weight: w.land * blockerBoost(p, ['land', 'population']), run: () => attempt(() => mut.buyLand(s, p.id, Math.floor((spend * 0.6) / s.market.landPrice))) },
       { name: 'Kathedrale', utility: p.title >= T.GRAF ? 40 : 0, weight: w.piety * blockerBoost(p, ['cathedral']), run: () => tryBuild(s, p, 'cathedral', spend) },
@@ -572,34 +564,6 @@ function pickIntrigueTarget(s: GameState, p: Player): Player | null {
 }
 
 /**
- * Reine Zerstörung hilft im Vierspieler-Spiel vor allem den Unbeteiligten. Die Ränkeschmiedin
- * sabotiert daher nur, wenn das Ziel kurz vor der Krone steht; sonst raubt sie.
- */
-const SABOTAGE_ONLY_NEAR_CROWN = false;
-
-/** Ränkeschmiedin späht ein Ziel aus, bevor sie zuschlägt (sonst: Schätzung aus öffentlichen Daten). */
-const SPY_BEFORE_STRIKE = true;
-
-/**
- * Abschreckung: Die Ränkeschmiedin hält ihr öffentlich sichtbares Heer nahe an der Stärke des
- * mächtigsten Rivalen, bevor sie investiert – sonst ist sie das bequemste Ziel für Feldzüge.
- */
-const RAENKE_DETERRENCE = false;
-const DETERRENCE_RATIO = 0.9;
-
-function deterrence(s: GameState, p: Player): void {
-  const strongest = Math.max(0, ...s.players.filter((o) => o.id !== p.id).map((o) => publicArmyEstimate(o)));
-  const target = strongest * DETERRENCE_RATIO;
-  const mine = publicArmyEstimate(p);
-  if (mine >= target) return;
-  // Söldner zählen 1 Punkt (×Palastbonus) in der öffentlichen Schätzung.
-  const bonus = Math.max(1, mine > 0 ? mine / Math.max(1, armySize(p.military)) : 1);
-  const n = Math.min(Math.ceil((target - mine) / bonus), Math.floor((budget(p) * 0.6) / UNITS.mercenaries.cost));
-  if (n > 0) attempt(() => mut.recruit(s, p.id, 'mercenaries', n));
-  if (publicArmyEstimate(p) < target) attempt(() => mut.setEntrenched(s, p.id, true));
-}
-
-/**
  * Ränkeschmiedin: Gummiband gegen den Führenden. 90 % ihrer Intrigen treffen den
  * Punktbesten; Raub bevorzugt, weil die Beute als Blutgeld ihr eigenes Wachstum finanziert.
  */
@@ -628,12 +592,11 @@ function leaderIntrigue(s: GameState, p: Player, w: Weights): void {
   if (exposureRisk > 0.8 && !nearCrown) return;
 
   let mission: CovertMission;
-  if (!fresh && SPY_BEFORE_STRIKE && available.includes('spy')) mission = 'spy'; // erst auskundschaften, dann zuschlagen
+  if (!fresh && available.includes('spy')) mission = 'spy'; // erst auskundschaften, dann zuschlagen
   else {
     mission = available.includes('rob') ? 'rob' : 'spy';
     if (available.includes('assassinate') && nearCrown && chance(s, 0.5)) mission = 'assassinate';
-    else if (available.includes('sabotage') && ahead > 1.3 && (!SABOTAGE_ONLY_NEAR_CROWN || nearCrown) && chance(s, 0.3))
-      mission = 'sabotage';
+    else if (available.includes('sabotage') && ahead > 1.3 && chance(s, 0.3)) mission = 'sabotage';
   }
 
   // Einsatz so wählen, dass die Chance bei ~60 % liegt – mit zu wenig Gold gar nicht erst anfangen.
@@ -649,10 +612,7 @@ function leaderIntrigue(s: GameState, p: Player, w: Weights): void {
     const expectedLoot = pSuccess * (cash * share(ROB_CASH_SHARE) + taxes * share(ROB_TAX_SHARE));
     // Enttarnung → Casus Belli → vielleicht (≈50 %) ein Rachefeldzug, den der Gegner mit ≈exposureRisk gewinnt.
     const expectedPenalty = (1 - pSuccess) * confess * 0.5 * exposureRisk * p.land * 0.15 * s.market.landPrice;
-    if (SABOTAGE_ONLY_NEAR_CROWN && !nearCrown) {
-      // Im Early/Midgame verbrennt Zerstörung nur eigenes Aufstiegskapital – dann lieber gar nichts.
-      if (expectedLoot < gold + expectedPenalty) return;
-    } else if (ahead >= 1.1 && available.includes('sabotage')) {
+    if (ahead >= 1.1 && available.includes('sabotage')) {
       // Gegen den Führenden wird ohnehin intrigiert, Sabotage birgt dasselbe Enttarnungsrisiko.
       // Raub ist vorzuziehen, sobald die Beute einen guten Teil des Einsatzes zurückholt.
       if (expectedLoot < gold * 0.5) mission = 'sabotage';
