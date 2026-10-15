@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "sim": "vitest run tests/simulation.test.ts"
+    "sim": "vitest run tests/simulation.test.ts",
+    "sim:econ": "vitest run tests/economy-report.test.ts"
   },
   "dependencies": {
     "react": "^18.3.1",
