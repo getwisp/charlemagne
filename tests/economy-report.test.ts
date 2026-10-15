@@ -58,3 +58,62 @@ it.runIf(process.env.SIM_ECON)('Ausgaben-Report je Archetyp', () => {
     if (a === 'raenkeschmiedin') console.log(`   Taverne-Ausgaben nach Mission: Ausspähen ${pg(r.spy)} · Raub ${pg(r.rob)} · Sabotage ${pg(r.sabotage)} · Attentat ${pg(r.assassinate)}`);
   }
 });
+
+// Einnahmen-Aufschlüsselung je Archetyp: SIM_INCOME=30 npm run sim:econ
+it.runIf(process.env.SIM_INCOME)('Einnahmen-Aufschlüsselung je Archetyp', async () => {
+  const { mut, calculateTaxes, pilgrimIncome, cityCount, grainSellValue, grainBuyCost, BUILDINGS } = await import('../src/engine');
+  const SEEDS = Number(process.env.SIM_INCOME) || 30;
+  const keys = ['incomeTax', 'salesTax', 'tolls', 'cityBonus', 'crimeLoss', 'pilgrims', 'grainSold', 'grainBought', 'landBought', 'landSold', 'buildings', 'plunder', 'interest', 'pop', 'land', 'market', 'mill', 'cities', 'taxRate', 'years'] as const;
+  type K = (typeof keys)[number];
+  const st: Record<string, Record<K, number>> = Object.fromEntries(ARCHS.map((a) => [a, Object.fromEntries(keys.map((k) => [k, 0])) as Record<K, number>]));
+  let current: { players: { id: string; name: string }[] } | null = null;
+  const nameOf = (id: string) => current!.players.find((p) => p.id === id)!.name;
+  // Aktionen der KI mitschneiden (gleiche Funktionen, nur gezählt)
+  const orig = { sellGrain: mut.sellGrain, buyGrain: mut.buyGrain, buyLand: mut.buyLand, sellLand: mut.sellLand, build: mut.build };
+  mut.sellGrain = (s, pid, n) => { const v = grainSellValue(s, n); orig.sellGrain(s, pid, n); st[nameOf(pid)].grainSold += v; };
+  mut.buyGrain = (s, pid, n) => { const v = grainBuyCost(s, n); orig.buyGrain(s, pid, n); st[nameOf(pid)].grainBought += v; };
+  mut.buyLand = (s, pid, n) => { orig.buyLand(s, pid, n); st[nameOf(pid)].landBought += Math.floor(n) * s.market.landPrice; };
+  mut.sellLand = (s, pid, n) => { orig.sellLand(s, pid, n); st[nameOf(pid)].landSold += Math.floor(n); };
+  mut.build = (s, pid, t, c = 1) => { orig.build(s, pid, t, c); st[nameOf(pid)].buildings += BUILDINGS[t].cost * c; };
+  try {
+    for (let seed = 1; seed <= SEEDS; seed++) {
+      let s = newGame({ seed, endYear: 1820, players: ARCHS.map((a) => ({ name: a, isAI: true, archetype: a })) });
+      while (s.phase === 'orders') {
+        current = s;
+        for (const p of s.players) { s = planAiTurn(s, p.id); current = s; }
+        for (const p of s.players) {
+          const t = calculateTaxes(p);
+          const r = st[p.name];
+          r.incomeTax += t.incomeTax; r.salesTax += t.salesTax; r.tolls += t.tolls; r.cityBonus += t.cityBonus; r.crimeLoss += t.crimeLoss;
+          r.pilgrims += pilgrimIncome(p); r.taxRate += p.taxes.income; r.years++;
+        }
+        const y = s.year;
+        s = resolveYear(s);
+        for (const p of s.players) {
+          const r = st[p.name];
+          if (p.lastReport) r.interest += p.lastReport.savingsInterest;
+          for (const m of (s.messages[p.id] ?? []).filter((m) => m.year === y)) {
+            const n = num(m.text);
+            if (m.title === 'Sieg auf dem Schlachtfeld!' || m.title === 'Angriff abgewehrt!') r.plunder += n[1] ?? 0;
+          }
+        }
+        s.messages = {};
+      }
+      for (const p of s.players) {
+        const r = st[p.name];
+        r.pop += p.population; r.land += p.land; r.market += p.buildings.market; r.mill += p.buildings.mill; r.cities += cityCount(p.buildings);
+      }
+    }
+  } finally {
+    Object.assign(mut, orig);
+  }
+  const pg = (v: number) => Math.round(v / SEEDS).toLocaleString('de-DE');
+  console.log(`\nØ je Partie (${SEEDS} Seeds) – Steuern brutto nach Art, Kriminalität als Abzug`);
+  console.log('Archetyp          Einkommenst.  MwSt.     Zölle    Stadtbonus  Kriminal.  Pilger | Korn verk.  Korn gek.  Land gekauft  Bauten   Beute   Zinsen | Ende: Bürger  Land    Märkte Mühlen Städte  Ø Eink.-Satz');
+  for (const a of ARCHS) {
+    const r = st[a];
+    console.log(
+      `${a.padEnd(16)} ${pg(r.incomeTax).padStart(12)} ${pg(r.salesTax).padStart(9)} ${pg(r.tolls).padStart(8)} ${pg(r.cityBonus).padStart(10)} ${('-' + pg(r.crimeLoss)).padStart(10)} ${pg(r.pilgrims).padStart(7)} | ${pg(r.grainSold).padStart(10)} ${pg(r.grainBought).padStart(10)} ${pg(r.landBought).padStart(12)} ${pg(r.buildings).padStart(8)} ${pg(r.plunder).padStart(7)} ${pg(r.interest).padStart(7)} | ${pg(r.pop).padStart(11)} ${pg(r.land).padStart(7)} ${(r.market / SEEDS).toFixed(1).padStart(6)} ${(r.mill / SEEDS).toFixed(1).padStart(6)} ${(r.cities / SEEDS).toFixed(1).padStart(6)}  ${(r.taxRate / r.years).toFixed(1).padStart(5)} %`,
+    );
+  }
+});

@@ -11,6 +11,7 @@ npm run build      # Typecheck + Produktions-Build nach dist/
 SIM_REPORT=1 npm run sim   # Balancing-Report: 5 komplette KI-Partien
 SIM_SUMMARY=30 npm run sim # Siege und Ø-Endtitel je Archetyp über 30 Seeds
 SIM_ECON=30 npm run sim:econ # Einnahmen, Sold, Taverne-Rendite, Kriege je Archetyp
+SIM_INCOME=30 npm run sim:econ # Steuern nach Art, Kornhandel, Landkauf, Bauten, Beute, Endbestand
 ```
 
 ## Architektur
