@@ -3,6 +3,7 @@
 // wer welche Intrige gesponnen hat.
 
 import {
+  CASUS_BELLI_MISSIONS,
   COVERT,
   COVERT_BASE_DEFENSE,
   COVERT_DEFENSE_PER_GUARD,
@@ -67,7 +68,8 @@ export function resolveCovert(s: GameState, a: CovertAction): boolean {
   if (!success) {
     const talked = chance(s, confessionChance(target));
     if (talked) {
-      if (!target.casusBelli.includes(from.id)) target.casusBelli.push(from.id);
+      const grantsCb = CASUS_BELLI_MISSIONS.includes(a.mission);
+      if (grantsCb && !target.casusBelli.includes(from.id)) target.casusBelli.push(from.id);
       // Groll nur, wenn der Auftraggeber bekannt ist – die KI schummelt nicht.
       target.grudges[from.id] = (target.grudges[from.id] ?? 0) + MISSION_GRUDGE[a.mission];
       from.scandals += 1;
@@ -75,14 +77,15 @@ export function resolveCovert(s: GameState, a: CovertAction): boolean {
         s,
         target.id,
         'Spion gefasst!',
-        `Eure Garde hat einen Spion gefasst. Unter der Folter gestand er, im Auftrag von ${from.name} gehandelt zu haben (${mission}). Ihr habt nun einen Casus Belli gegen ${from.name}: Moralbonus und keine Marschkosten für einen Rachefeldzug.`,
+        `Eure Garde hat einen Spion gefasst. Unter der Folter gestand er, im Auftrag von ${from.name} gehandelt zu haben (${mission}).` +
+          (grantsCb ? ` Ihr habt nun einen Casus Belli gegen ${from.name}: Moralbonus und keine Marschkosten für einen Rachefeldzug.` : ''),
         'warning',
       );
       tell(
         s,
         from.id,
         'Mission gescheitert',
-        `Euer Agent (${mission} gegen ${target.name}) wurde gefasst und hat unter der Folter geredet. ${target.name} kennt nun Euren Namen – und hat einen Casus Belli.`,
+        `Euer Agent (${mission} gegen ${target.name}) wurde gefasst und hat unter der Folter geredet. ${target.name} kennt nun Euren Namen${grantsCb ? ' – und hat einen Casus Belli' : ''}.`,
         'error',
       );
       chronicle(s, `Skandal: Ein Spion von ${from.name} wurde bei ${target.name} gefasst.`);

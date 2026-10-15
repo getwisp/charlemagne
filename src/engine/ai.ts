@@ -564,6 +564,12 @@ function pickIntrigueTarget(s: GameState, p: Player): Player | null {
 }
 
 /**
+ * Reine Zerstörung hilft im Vierspieler-Spiel vor allem den Unbeteiligten. Die Ränkeschmiedin
+ * sabotiert daher nur, wenn das Ziel kurz vor der Krone steht; sonst raubt sie.
+ */
+const SABOTAGE_ONLY_NEAR_CROWN = false;
+
+/**
  * Ränkeschmiedin: Gummiband gegen den Führenden. 90 % ihrer Intrigen treffen den
  * Punktbesten; Raub bevorzugt, weil die Beute als Blutgeld ihr eigenes Wachstum finanziert.
  */
@@ -596,7 +602,8 @@ function leaderIntrigue(s: GameState, p: Player, w: Weights): void {
   else {
     mission = available.includes('rob') ? 'rob' : 'spy';
     if (available.includes('assassinate') && nearCrown && chance(s, 0.5)) mission = 'assassinate';
-    else if (available.includes('sabotage') && ahead > 1.3 && chance(s, 0.3)) mission = 'sabotage';
+    else if (available.includes('sabotage') && ahead > 1.3 && (!SABOTAGE_ONLY_NEAR_CROWN || nearCrown) && chance(s, 0.3))
+      mission = 'sabotage';
   }
 
   // Einsatz so wählen, dass die Chance bei ~60 % liegt – mit zu wenig Gold gar nicht erst anfangen.
@@ -612,7 +619,10 @@ function leaderIntrigue(s: GameState, p: Player, w: Weights): void {
     const expectedLoot = pSuccess * (cash * share(ROB_CASH_SHARE) + taxes * share(ROB_TAX_SHARE));
     // Enttarnung → Casus Belli → vielleicht (≈50 %) ein Rachefeldzug, den der Gegner mit ≈exposureRisk gewinnt.
     const expectedPenalty = (1 - pSuccess) * confess * 0.5 * exposureRisk * p.land * 0.15 * s.market.landPrice;
-    if (ahead >= 1.1 && available.includes('sabotage')) {
+    if (SABOTAGE_ONLY_NEAR_CROWN && !nearCrown) {
+      // Im Early/Midgame verbrennt Zerstörung nur eigenes Aufstiegskapital – dann lieber gar nichts.
+      if (expectedLoot < gold + expectedPenalty) return;
+    } else if (ahead >= 1.1 && available.includes('sabotage')) {
       // Gegen den Führenden wird ohnehin intrigiert, Sabotage birgt dasselbe Enttarnungsrisiko.
       // Raub ist vorzuziehen, sobald die Beute einen guten Teil des Einsatzes zurückholt.
       if (expectedLoot < gold * 0.5) mission = 'sabotage';

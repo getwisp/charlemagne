@@ -1,4 +1,4 @@
-import type { Archetype, BuildingType, RecruitableUnit, Weather } from './types';
+import type { Archetype, BuildingType, CovertMission, RecruitableUnit, Weather } from './types';
 
 export const TITLES = [
   'Edler',
@@ -179,6 +179,12 @@ export const PALACE_DEFENSE = 0.1;
 export const PALACE_DEFENSE_MAX = 0.5;
 export const ENTRENCH_BONUS = 0.25;
 export const CASUS_BELLI_MORALE = 0.25;
+/** Unprovozierter Angriffskrieg (ohne Casus Belli) gilt als Skandal – die Kirchenfürsten sind empört. */
+export const WAR_GUILT_SCANDALS = 0;
+/** Anteil des eroberten Landes, der als verwüstetes Niemandsland verloren geht. */
+export const WAR_DEVASTATION = 0;
+/** Multiplikator für die Truppenverluste des Angreifers (Sturm auf feindliche Stellungen). */
+export const ATTACKER_ATTRITION = 1;
 /** Land, das einem Verlierer nach einer Schlacht mindestens bleibt (Reichsfrieden). */
 export const MIN_LAND_AFTER_BATTLE = 5000;
 
@@ -218,6 +224,8 @@ export const COVERT: Record<
 export const COVERT_BASE_DEFENSE = 100;
 export const COVERT_DEFENSE_PER_GUARD = 15;
 export const COVERT_MIN_GOLD = 100;
+/** Missionen, deren Enttarnung dem Opfer einen Casus Belli verschafft. Bei den übrigen bleibt es bei Groll und Skandal. */
+export const CASUS_BELLI_MISSIONS: readonly CovertMission[] = ['spy', 'rob', 'sabotage', 'assassinate'];
 /** Raub: Anteil des Bargelds in der Schatzkammer */
 export const ROB_CASH_SHARE = [0.1, 0.25] as const;
 /**
