@@ -83,6 +83,8 @@ export interface YearReport {
   immigrants: number;
   emigrants: number;
   taxIncome: number;
+  /** Davon von Dieben abgefangen */
+  taxIntercepted: number;
   incomeTax: number;
   salesTax: number;
   tolls: number;
@@ -101,6 +103,8 @@ export interface SpyIntel {
   justice: number;
   gold: number;
   army: number;
+  /** Steuereinnahmen pro Jahr zum Zeitpunkt des Berichts */
+  taxIncome: number;
 }
 
 export interface Player {
@@ -156,6 +160,8 @@ export interface Player {
   harvestThisYear: number;
   /** Im letzten Jahreswechsel per Raub erbeutetes Gold (KI: Blutgeld-Investition). */
   loot?: number;
+  /** Von Steuereintreiber-Dieben abgefangene Steuern dieses Jahres (werden bei der Abrechnung abgezogen). */
+  taxIntercepted?: number;
   /** Erkenntnisse aus erfolgreicher Spionage (exakte Werte zum Zeitpunkt des Berichts). */
   intel?: Record<string, SpyIntel>;
   /** Menschlicher Spieler hat seinen Zug beendet. */

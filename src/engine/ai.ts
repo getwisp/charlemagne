@@ -581,7 +581,7 @@ function leaderIntrigue(s: GameState, p: Player, w: Weights): void {
   if (!chance(s, pCovert)) return;
 
   const intel = p.intel?.[target.id];
-  const fresh = intel && s.year - intel.year <= 3 ? intel : undefined;
+  const fresh = intel && s.year - intel.year <= 5 ? intel : undefined;
   const defense = estimatedCovertDefense(target, fresh);
   // Wie gefährlich ist eine Enttarnung? Ein überlegenes Heer mit Casus Belli kostet Land.
   const exposureRisk = Math.min(1, publicArmyEstimate(target) / Math.max(1, defensePower(p)));
@@ -604,14 +604,19 @@ function leaderIntrigue(s: GameState, p: Player, w: Weights): void {
   if (gold < 300 || gold < defense * 0.9) return;
   const pSuccess = Math.min(COVERT[mission].maxChance, gold / (gold + defense));
   if (mission === 'rob') {
-    // Erwartungswert: Beute (~17,5 % der Kasse) gegen Einsatz und das Risiko eines Rachefeldzugs.
-    const cash = fresh ? fresh.gold : publicInfo(target).population * 4;
-    const expectedLoot = pSuccess * cash * 0.175;
-    const expectedPenalty = (1 - pSuccess) * confess * exposureRisk * p.land * 0.15 * s.market.landPrice;
-    if (expectedLoot < gold + expectedPenalty) {
-      // Raub lohnt nicht? Dann den Führenden wenigstens ausbremsen.
-      if (!available.includes('sabotage') || ahead < 1.1) return;
-      mission = 'sabotage';
+    // Erwartungswert: Beute (~17,5 % der Kasse + ~15 % der Jahressteuern) gegen Einsatz und Rache-Risiko.
+    const info = publicInfo(target);
+    const cash = fresh ? fresh.gold : info.population * 4;
+    const taxes = fresh ? fresh.taxIncome : info.population * 1.6 + info.buildings * 1600;
+    const expectedLoot = pSuccess * (cash * 0.175 + taxes * 0.15);
+    // Enttarnung → Casus Belli → vielleicht (≈50 %) ein Rachefeldzug, den der Gegner mit ≈exposureRisk gewinnt.
+    const expectedPenalty = (1 - pSuccess) * confess * 0.5 * exposureRisk * p.land * 0.15 * s.market.landPrice;
+    if (ahead >= 1.1 && available.includes('sabotage')) {
+      // Gegen den Führenden wird ohnehin intrigiert, Sabotage birgt dasselbe Enttarnungsrisiko.
+      // Raub ist vorzuziehen, sobald die Beute einen guten Teil des Einsatzes zurückholt.
+      if (expectedLoot < gold * 0.5) mission = 'sabotage';
+    } else if (expectedLoot < gold + expectedPenalty) {
+      return;
     }
   } else if (exposureRisk > 1.2 && mission !== 'spy' && chance(s, 0.6)) {
     return; // Gegen einen übermächtigen Gegner ist Abwarten klüger.

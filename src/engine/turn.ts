@@ -176,7 +176,9 @@ export function resolveYear(state: GameState): GameState {
     });
     p.grain = Math.max(0, p.grain - report.grainDistributed - report.ratLoss);
     p.population = Math.max(0, p.population + report.populationAfter - p.population);
-    p.gold += report.taxIncome - report.militaryUpkeep - report.buildingUpkeep - report.landlessKnightPay;
+    const intercepted = Math.min(p.taxIntercepted ?? 0, Math.max(0, report.taxIncome));
+    p.taxIntercepted = 0;
+    p.gold += report.taxIncome - intercepted - report.militaryUpkeep - report.buildingUpkeep - report.landlessKnightPay;
     if (report.desertedKnights > 0) {
       p.military.knights -= report.desertedKnights;
       tell(s, p.id, 'Ritter desertieren!', `${report.desertedKnights} landlose Ritter haben Euch verlassen, weil Ihr weder Lehen noch Strafsold bieten konntet.`, 'error');
@@ -184,7 +186,14 @@ export function resolveYear(state: GameState): GameState {
       tell(s, p.id, 'Landlose Ritter', `${report.landlessKnights} Ritter ohne Lehen forderten ${fmt(report.landlessKnightPay)} Taler Strafsold.`, 'warning');
     }
     const bank = processBanking(s, p);
-    p.lastReport = { ...report, year: s.year, savingsInterest: bank.interest, loanPayments: bank.payments };
+    p.lastReport = {
+      ...report,
+      year: s.year,
+      taxIntercepted: intercepted,
+      netGold: report.netGold - intercepted,
+      savingsInterest: bank.interest,
+      loanPayments: bank.payments,
+    };
 
     if (report.starved > 0)
       tell(s, p.id, 'Hungersnot!', `${fmt(report.starved)} Menschen sind verhungert, ${fmt(report.emigrants)} sind abgewandert.`, 'error');

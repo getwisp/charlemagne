@@ -70,7 +70,7 @@ export function TavernWindow() {
           </span>
         </div>
         <div className="hint">
-          Erfolgschance = Gold ÷ (Gold + Garde × Justizhärte des Opfers). Attentate gelingen höchstens zu 25 %. Scheitert ein Agent und redet unter der Folter, erhält das Opfer einen
+          Erfolgschance = Gold ÷ (Gold + Garde × Justizhärte des Opfers). Raub fängt zusätzlich einen Teil der Steuereinnahmen des Opfers ab. Attentate gelingen höchstens zu 25 %. Scheitert ein Agent und redet unter der Folter, erhält das Opfer einen
           Casus Belli gegen Euch. Das Gold ist in jedem Fall weg. Mindesteinsatz {COVERT_MIN_GOLD} Taler.
         </div>
         <div className="btn-row">

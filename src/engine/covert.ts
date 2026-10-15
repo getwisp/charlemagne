@@ -8,9 +8,11 @@ import {
   COVERT_DEFENSE_PER_GUARD,
   GRUDGE,
   JUSTICE_DEFENSE,
+  ROB_CASH_SHARE,
+  ROB_TAX_SHARE,
   TITLES,
 } from './constants';
-import { cityCount, totalDebt } from './economy';
+import { calculateTaxes, cityCount, totalDebt } from './economy';
 import { chance, randFloat } from './rng';
 import type { CovertAction, CovertMission, GameState, Player } from './types';
 import { chronicle, fmt, getPlayer, tell } from './util';
@@ -100,15 +102,34 @@ export function resolveCovert(s: GameState, a: CovertAction): boolean {
         justice: target.justice,
         gold: Math.max(0, target.gold),
         army: target.military.mercenaries + target.military.cannons + target.military.squires + target.military.knights,
+        taxIncome: Math.max(0, calculateTaxes(target).total),
       };
       break;
     case 'rob': {
-      const stolen = Math.round(Math.max(0, target.gold) * randFloat(s, 0.1, 0.25));
+      const stolen = Math.round(Math.max(0, target.gold) * randFloat(s, ROB_CASH_SHARE[0], ROB_CASH_SHARE[1]));
+      // Steuereintreiber: Die Diebe fangen einen Teil der laufenden Steuereinnahmen ab,
+      // bevor sie verbucht werden – das Sparkonto bleibt zu 100 % sicher.
+      const taxes = Math.max(0, calculateTaxes(target).total);
+      const open = Math.max(0, taxes - (target.taxIntercepted ?? 0));
+      const skim = Math.min(open, Math.round(taxes * randFloat(s, ROB_TAX_SHARE[0], ROB_TAX_SHARE[1])));
       target.gold -= stolen;
-      from.gold += stolen;
-      from.loot = (from.loot ?? 0) + stolen;
-      tell(s, from.id, 'Raubzug erfolgreich', `Eure Diebe haben ${fmt(stolen)} Taler aus der Schatzkammer von ${target.name} erbeutet.`, 'good');
-      tell(s, target.id, 'Raub!', `Unbekannte haben ${fmt(stolen)} Taler aus Eurer Schatzkammer gestohlen.`, 'error');
+      target.taxIntercepted = (target.taxIntercepted ?? 0) + skim;
+      from.gold += stolen + skim;
+      from.loot = (from.loot ?? 0) + stolen + skim;
+      tell(
+        s,
+        from.id,
+        'Raubzug erfolgreich',
+        `Eure Diebe haben ${fmt(stolen)} Taler aus der Schatzkammer von ${target.name} erbeutet und ${fmt(skim)} Taler Steuergelder abgefangen.`,
+        'good',
+      );
+      tell(
+        s,
+        target.id,
+        'Raub!',
+        `Unbekannte haben ${fmt(stolen)} Taler aus Eurer Schatzkammer gestohlen und ${fmt(skim)} Taler Eurer Steuereintreiber abgefangen.`,
+        'error',
+      );
       break;
     }
     case 'sabotage': {

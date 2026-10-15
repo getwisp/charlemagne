@@ -254,6 +254,7 @@ export function calculateEconomyTurn(p: Player, market: MarketState, opts: Econo
     immigrants: pop.immigrants,
     emigrants: pop.emigrants,
     taxIncome: taxes.total,
+    taxIntercepted: 0,
     incomeTax: taxes.incomeTax,
     salesTax: taxes.salesTax,
     tolls: taxes.tolls,

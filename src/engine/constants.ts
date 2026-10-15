@@ -176,7 +176,12 @@ export const COVERT: Record<
   { name: string; minTitle: number; description: string; maxChance: number }
 > = {
   spy: { name: 'Ausspähen', minTitle: 2, description: 'Zeigt die exakten Werte des Ziels.', maxChance: 0.95 },
-  rob: { name: 'Raub', minTitle: 3, description: 'Stiehlt 10–25 % des Bargelds.', maxChance: 0.9 },
+  rob: {
+    name: 'Raub',
+    minTitle: 3,
+    description: 'Stiehlt 10–25 % des Bargelds und fängt 10–20 % der Steuereinnahmen des Jahres ab.',
+    maxChance: 0.9,
+  },
   sabotage: {
     name: 'Sabotage',
     minTitle: 4,
@@ -193,6 +198,13 @@ export const COVERT: Record<
 export const COVERT_BASE_DEFENSE = 100;
 export const COVERT_DEFENSE_PER_GUARD = 15;
 export const COVERT_MIN_GOLD = 100;
+/** Raub: Anteil des Bargelds in der Schatzkammer */
+export const ROB_CASH_SHARE = [0.1, 0.25] as const;
+/**
+ * Steuereintreiber-Raub: Anteil der laufenden Steuereinnahmen, den die Diebe abfangen,
+ * bevor das Geld in Schatzkammer oder Bank verbucht wird. Das Sparkonto bleibt unangetastet.
+ */
+export const ROB_TAX_SHARE = [0.1, 0.2] as const;
 
 // ---------------------------------------------------------------- Titel
 export interface TitleRequirements {

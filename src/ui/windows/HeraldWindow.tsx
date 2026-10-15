@@ -10,7 +10,8 @@ export function HeraldWindow({ read }: { read: HeraldMessage[] }) {
     <div>
       {report && (
         <div className="sunken field" style={{ padding: 6, marginBottom: 6 }}>
-          <b>Jahresbilanz {report.year}:</b> Steuern {report.taxIncome.toLocaleString('de-DE')} · Sold {report.militaryUpkeep.toLocaleString('de-DE')} · Kredite{' '}
+          <b>Jahresbilanz {report.year}:</b> Steuern {report.taxIncome.toLocaleString('de-DE')}
+          {report.taxIntercepted > 0 && <span className="neg"> (davon {report.taxIntercepted.toLocaleString('de-DE')} von Dieben abgefangen)</span>} · Sold {report.militaryUpkeep.toLocaleString('de-DE')} · Kredite{' '}
           {report.loanPayments.toLocaleString('de-DE')} · Saldo {report.netGold.toLocaleString('de-DE')} Taler. Bevölkerung +{report.births + report.immigrants} / −
           {report.deaths + report.starved + report.emigrants}. Ratten: {report.ratLoss.toLocaleString('de-DE')} Scheffel.
         </div>

@@ -211,6 +211,28 @@ describe('Taverne', () => {
     expect(covertChance(1000, t, 'rob')).toBeLessThan(covertChance(1000, { ...t, justice: 1 }, 'rob'));
   });
 
+  it('Steuereintreiber-Raub: fängt Steuern ab, Sparkonto bleibt sicher', () => {
+    let s = game(2);
+    const [thief, victim] = s.players;
+    thief.title = T.GRAF;
+    victim.military.guards = 0;
+    victim.gold = 0; // nichts in der Schatzkammer
+    victim.savings = 50000;
+    let ok = false;
+    for (let i = 0; i < 20 && !ok; i++) ok = resolveCovert(s, { kind: 'covert', id: 'c', from: thief.id, target: victim.id, mission: 'rob', gold: 100000 });
+    expect(ok).toBe(true);
+    const skim = victim.taxIntercepted ?? 0;
+    expect(skim).toBeGreaterThan(0);
+    expect(thief.loot).toBe(skim);
+    // Bei der Jahresabrechnung fehlt das Abgefangene in der Kasse des Opfers.
+    s.queue = [];
+    s = resolveYear(s);
+    const v = s.players[1];
+    expect(v.savings).toBeGreaterThanOrEqual(50000);
+    expect(v.lastReport!.taxIntercepted).toBe(skim);
+    expect(v.taxIntercepted).toBe(0);
+  });
+
   it('Intrigen werden erst beim Jahreswechsel aufgelöst', () => {
     let s = game();
     s.players[0].title = T.GRAF;
