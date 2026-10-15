@@ -4,6 +4,8 @@ import {
   ActionError,
   ARCHETYPES,
   blockerBoost,
+  intrigueTargetScores,
+  knightGoal,
   effectiveWeights,
   resolveCovert,
   TITLE_BLOCKER_MULTIPLIER,
@@ -372,5 +374,26 @@ describe('KI', () => {
     for (let i = 0; i < 20 && !ok; i++) ok = resolveCovert(s, { kind: 'covert', id: 'c', from: 'p1', target: 'p2', mission: 'spy', gold: 100000 });
     expect(s.players[0].intel?.p2?.guards).toBe(0);
     expect(s.players[0].intel?.p2?.year).toBe(s.year);
+  });
+
+  it('Ritter-Vorlauf: Pipeline startet schon einen Titel vor dem Bedarf', () => {
+    const s = game();
+    const p = s.players[0];
+    p.title = T.GRAF; // Fürst braucht keine Ritter, der Herzog danach 10
+    expect(knightGoal(p)).toBe(10);
+    p.title = T.BARON;
+    expect(knightGoal(p)).toBe(0);
+  });
+
+  it('Ziel-Scoring: Führender ×3,5, Schuldturm ×0,1, Groll zählt mit', () => {
+    const s = game(4);
+    const [me, a, b, c] = s.players;
+    a.land = 100000; // klar Führender
+    b.debtorPrison = 1;
+    me.grudges[c.id] = 40;
+    const byId = Object.fromEntries(intrigueTargetScores(s, me).map((x) => [x.target.id, x.score]));
+    expect(byId[a.id]).toBe(20 * 3.5);
+    expect(byId[b.id]).toBeCloseTo(2);
+    expect(byId[c.id]).toBe(60);
   });
 });

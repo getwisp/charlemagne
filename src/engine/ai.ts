@@ -15,6 +15,7 @@ import {
   HECTARES_PER_FARMER,
   KNIGHT_MIN_XP,
   T,
+  TITLE_REQUIREMENTS,
   UNITS,
   YIELD_PER_HECTARE,
   type TitleRequirements,
@@ -248,7 +249,26 @@ function tryBuild(s: GameState, p: Player, type: BuildingType, maxSpend: number)
   return attempt(() => mut.build(s, p.id, type, 1));
 }
 
+/**
+ * Ritter haben mindestens drei Jahre Vorlauf (Knappe → 2 Manöver → Ritterschlag).
+ * Verlangt der nächste oder übernächste Titel Ritter, läuft die Pipeline daher
+ * unabhängig vom Charakter-Gewicht – auch beim friedlichen Kirchenfürsten.
+ */
+export function knightGoal(p: Player): number {
+  const next = TITLE_REQUIREMENTS[p.title + 1]?.knights ?? 0;
+  const after = TITLE_REQUIREMENTS[p.title + 2]?.knights ?? 0;
+  return Math.max(next, p.title + 2 <= T.KOENIG ? after : 0);
+}
+
+function knightLeadTime(s: GameState, p: Player): void {
+  const goal = knightGoal(p);
+  const missing = goal - p.military.knights;
+  if (missing <= 0) return;
+  knightPipeline(s, p, missing, budget(p) * 0.6);
+}
+
 function titleFocus(s: GameState, p: Player, w: Weights): void {
+  knightLeadTime(s, p);
   // Mehrere Durchläufe: Engpass wechselt, sobald einer behoben ist.
   for (let round = 0; round < 4; round++) {
     const b = bottleneck(p);
@@ -513,15 +533,45 @@ function estimatedCovertDefense(t: Player, intel?: SpyIntel): number {
 }
 
 /**
+ * Ziel-Scoring der Ränkeschmiedin: Grundwert + Groll, der Führende zählt ×3,5,
+ * wer im Schuldturm sitzt (kein Geld, kein Einfluss) nur ×0,1. Gezogen wird
+ * gewichtet – so trifft sie meist den Ersten, vergisst aber alte Rechnungen nicht.
+ */
+export function intrigueTargetScores(s: GameState, p: Player): { target: Player; score: number }[] {
+  const rivals = s.players.filter((o) => o.id !== p.id);
+  if (rivals.length === 0) return [];
+  const leader = [...rivals].sort((a, b) => score(b) - score(a))[0];
+  return rivals.map((o) => {
+    let v = 20 + (p.grudges[o.id] ?? 0);
+    if (o.id === leader.id) v *= 3.5;
+    if (o.debtorPrison > 0) v *= 0.1;
+    return { target: o, score: v };
+  });
+}
+
+function pickIntrigueTarget(s: GameState, p: Player): Player | null {
+  const scored = intrigueTargetScores(s, p);
+  if (scored.length === 0) return null;
+  // Schärfen (quadrieren), damit der Führende klar dominiert, ohne Ausschließlichkeit.
+  const weights = scored.map((x) => x.score * x.score);
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = random(s) * total;
+  for (let i = 0; i < scored.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return scored[i].target;
+  }
+  return scored[scored.length - 1].target;
+}
+
+/**
  * Ränkeschmiedin: Gummiband gegen den Führenden. 90 % ihrer Intrigen treffen den
  * Punktbesten; Raub bevorzugt, weil die Beute als Blutgeld ihr eigenes Wachstum finanziert.
  */
 function leaderIntrigue(s: GameState, p: Player, w: Weights): void {
   const rivals = s.players.filter((o) => o.id !== p.id);
   if (rivals.length === 0) return;
-  const leader = [...rivals].sort((a, b) => score(b) - score(a))[0];
-  const grudge = hostility(s, p)[0];
-  const target = chance(s, 0.9) || !grudge ? leader : grudge.target;
+  const target = pickIntrigueTarget(s, p);
+  if (!target) return;
   const available = (['rob', 'sabotage', 'assassinate', 'spy'] as CovertMission[]).filter((k) => p.title >= COVERT[k].minTitle);
   if (available.length === 0) return;
 
