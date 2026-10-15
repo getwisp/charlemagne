@@ -20,7 +20,7 @@ import {
   YIELD_PER_HECTARE,
   type TitleRequirements,
 } from './constants';
-import { COVERT_BASE_DEFENSE, COVERT_DEFENSE_PER_GUARD, JUSTICE_DEFENSE } from './constants';
+import { COVERT_BASE_DEFENSE, COVERT_DEFENSE_PER_GUARD, JUSTICE_DEFENSE, ROB_CASH_SHARE, ROB_TAX_SHARE } from './constants';
 import {
   buildingUpkeep,
   calculateEconomyTurn,
@@ -604,11 +604,12 @@ function leaderIntrigue(s: GameState, p: Player, w: Weights): void {
   if (gold < 300 || gold < defense * 0.9) return;
   const pSuccess = Math.min(COVERT[mission].maxChance, gold / (gold + defense));
   if (mission === 'rob') {
-    // Erwartungswert: Beute (~17,5 % der Kasse + ~15 % der Jahressteuern) gegen Einsatz und Rache-Risiko.
+    // Erwartungswert: Beute (Anteil der Kasse + Anteil der Jahressteuern) gegen Einsatz und Rache-Risiko.
     const info = publicInfo(target);
     const cash = fresh ? fresh.gold : info.population * 4;
     const taxes = fresh ? fresh.taxIncome : info.population * 1.6 + info.buildings * 1600;
-    const expectedLoot = pSuccess * (cash * 0.175 + taxes * 0.15);
+    const share = (range: readonly [number, number]) => (range[0] + range[1]) / 2;
+    const expectedLoot = pSuccess * (cash * share(ROB_CASH_SHARE) + taxes * share(ROB_TAX_SHARE));
     // Enttarnung → Casus Belli → vielleicht (≈50 %) ein Rachefeldzug, den der Gegner mit ≈exposureRisk gewinnt.
     const expectedPenalty = (1 - pSuccess) * confess * 0.5 * exposureRisk * p.land * 0.15 * s.market.landPrice;
     if (ahead >= 1.1 && available.includes('sabotage')) {
