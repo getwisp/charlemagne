@@ -1,0 +1,781 @@
+/* Windows 95/98 – Retro-Desktop-UX */
+:root {
+  --face: #c0c0c0;
+  --light: #ffffff;
+  --hilight: #dfdfdf;
+  --shadow: #808080;
+  --dark: #000000;
+  --desktop: #008080;
+  --title-a: #000080;
+  --title-b: #1084d0;
+  --title-inactive-a: #808080;
+  --title-inactive-b: #b5b5b5;
+  --select: #000080;
+  --text: #000000;
+  --good: #006400;
+  --bad: #a00000;
+  --warn: #8a5a00;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--desktop);
+  color: var(--text);
+  font-family: 'MS Sans Serif', 'Microsoft Sans Serif', Tahoma, 'Segoe UI', Arial, sans-serif;
+  font-size: 12px;
+  -webkit-font-smoothing: none;
+  user-select: none;
+  overflow: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* ------------------------------------------------------------------ Rahmen */
+.raised {
+  background: var(--face);
+  border: 1px solid;
+  border-color: var(--light) var(--dark) var(--dark) var(--light);
+  box-shadow: inset -1px -1px var(--shadow), inset 1px 1px var(--hilight);
+}
+
+.sunken {
+  border: 1px solid;
+  border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+  box-shadow: inset 1px 1px var(--dark), inset -1px -1px var(--hilight);
+}
+
+.field {
+  background: var(--light);
+}
+
+.groupbox {
+  border: 1px solid var(--shadow);
+  box-shadow: 1px 1px 0 var(--light), inset 1px 1px 0 var(--light);
+  padding: 10px 8px 8px;
+  margin: 8px 0 6px;
+  position: relative;
+}
+
+.groupbox > legend {
+  padding: 0 3px;
+  margin-left: -2px;
+}
+
+hr.etched {
+  border: 0;
+  border-top: 1px solid var(--shadow);
+  border-bottom: 1px solid var(--light);
+  margin: 6px 0;
+}
+
+/* ------------------------------------------------------------------ Buttons */
+.btn {
+  min-width: 75px;
+  min-height: 23px;
+  padding: 2px 10px;
+  background: var(--face);
+  border: 1px solid;
+  border-color: var(--light) var(--dark) var(--dark) var(--light);
+  box-shadow: inset -1px -1px var(--shadow), inset 1px 1px var(--hilight);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn:active:not(:disabled),
+.btn.pressed {
+  border-color: var(--dark) var(--light) var(--light) var(--dark);
+  box-shadow: inset 1px 1px var(--shadow), inset -1px -1px var(--hilight);
+  padding: 3px 9px 1px 11px;
+}
+
+.btn:focus-visible {
+  outline: 1px dotted var(--dark);
+  outline-offset: -4px;
+}
+
+.btn:disabled {
+  color: var(--shadow);
+  text-shadow: 1px 1px var(--light);
+  cursor: default;
+}
+
+.btn.small {
+  min-width: 0;
+  min-height: 19px;
+  padding: 0 6px;
+}
+
+.btn.primary {
+  outline: 1px solid var(--dark);
+}
+
+.btn-row {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------------ Eingaben */
+.input,
+select.input {
+  height: 21px;
+  padding: 2px 3px;
+  background: var(--light);
+  border: 1px solid;
+  border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+  box-shadow: inset 1px 1px var(--dark), inset -1px -1px var(--hilight);
+  outline: none;
+  user-select: text;
+  min-width: 0;
+}
+
+input.input[type='number'] {
+  width: 90px;
+  text-align: right;
+}
+
+input[type='range'] {
+  width: 100%;
+  accent-color: var(--select);
+}
+
+label.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------------ Fenster */
+.window {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  min-width: 260px;
+  max-width: calc(100vw - 8px);
+  max-height: calc(100% - 4px);
+  padding: 3px;
+}
+
+.window.modal-window {
+  position: relative;
+}
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 2px 0 3px;
+  color: var(--light);
+  font-weight: bold;
+  background: linear-gradient(90deg, var(--title-inactive-a), var(--title-inactive-b));
+  cursor: default;
+  flex-shrink: 0;
+  touch-action: none;
+}
+
+.window.active .titlebar,
+.modal-window .titlebar {
+  background: linear-gradient(90deg, var(--title-a), var(--title-b));
+}
+
+.titlebar .title {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.titlebar .tb-btn {
+  width: 16px;
+  height: 14px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  font-size: 10px;
+  line-height: 10px;
+  font-weight: bold;
+  color: var(--dark);
+}
+
+.window-body {
+  padding: 8px;
+  overflow: auto;
+  flex: 1;
+}
+
+.menubar {
+  display: flex;
+  gap: 2px;
+  padding: 1px 0;
+}
+
+.menubar span {
+  padding: 2px 6px;
+}
+
+.menubar span:hover {
+  background: var(--select);
+  color: var(--light);
+}
+
+.statusline {
+  display: flex;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.statusline > div {
+  flex: 1;
+  padding: 1px 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ------------------------------------------------------------------ Tabs */
+.tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: -1px;
+  position: relative;
+  z-index: 1;
+  padding-left: 2px;
+}
+
+.tab {
+  padding: 3px 10px;
+  background: var(--face);
+  border: 1px solid;
+  border-color: var(--light) var(--dark) transparent var(--light);
+  box-shadow: inset -1px 0 var(--shadow), inset 1px 1px var(--hilight);
+  border-radius: 3px 3px 0 0;
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.tab.active {
+  margin-top: 0;
+  padding-bottom: 5px;
+  z-index: 2;
+}
+
+.tab-panel {
+  border: 1px solid;
+  border-color: var(--light) var(--dark) var(--dark) var(--light);
+  box-shadow: inset -1px -1px var(--shadow);
+  padding: 10px;
+}
+
+/* ------------------------------------------------------------------ Tabellen */
+.table-wrap {
+  background: var(--light);
+  overflow: auto;
+}
+
+table.grid {
+  border-collapse: collapse;
+  width: 100%;
+  background: var(--light);
+}
+
+table.grid th {
+  background: var(--face);
+  font-weight: normal;
+  text-align: left;
+  padding: 2px 6px;
+  border: 1px solid;
+  border-color: var(--light) var(--shadow) var(--shadow) var(--light);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+
+table.grid td {
+  padding: 2px 6px;
+  border-bottom: 1px dotted #d0d0d0;
+  white-space: nowrap;
+}
+
+table.grid tr.selected td {
+  background: var(--select);
+  color: var(--light);
+}
+
+table.kv {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+table.kv td {
+  padding: 1px 2px;
+}
+
+table.kv td.num,
+table.grid td.num,
+table.grid th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+table.kv tr.sum td {
+  border-top: 1px solid var(--dark);
+  font-weight: bold;
+}
+
+.pos {
+  color: var(--good);
+}
+
+.neg {
+  color: var(--bad);
+}
+
+.warn {
+  color: var(--warn);
+}
+
+.muted {
+  color: #505050;
+}
+
+.hint {
+  color: #404040;
+  font-size: 11px;
+  margin: 4px 0;
+  line-height: 1.35;
+}
+
+/* ------------------------------------------------------------------ Fortschritt */
+.progress {
+  height: 16px;
+  padding: 2px;
+  background: var(--face);
+}
+
+.progress-fill {
+  height: 100%;
+  background: repeating-linear-gradient(90deg, var(--select) 0 8px, transparent 8px 10px);
+}
+
+.progress-fill.done {
+  background: repeating-linear-gradient(90deg, var(--good) 0 8px, transparent 8px 10px);
+}
+
+/* ------------------------------------------------------------------ Layout */
+.app {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  grid-template-rows: 1fr 30px;
+  height: 100%;
+}
+
+.sidebar {
+  grid-row: 1;
+  grid-column: 1;
+  margin: 4px 0 4px 4px;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.sidebar .sb-head {
+  background: linear-gradient(90deg, var(--title-a), var(--title-b));
+  color: var(--light);
+  font-weight: bold;
+  padding: 3px 6px;
+}
+
+.sidebar .sb-body {
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 2px 4px;
+  background: var(--light);
+}
+
+.stat .label {
+  color: #303030;
+}
+
+.stat .value {
+  font-variant-numeric: tabular-nums;
+  font-weight: bold;
+  text-align: right;
+}
+
+.desktop {
+  grid-row: 1;
+  grid-column: 2;
+  position: relative;
+  overflow: hidden;
+}
+
+.icons {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: grid;
+  grid-template-rows: repeat(auto-fill, 76px);
+  grid-auto-flow: column;
+  grid-auto-columns: 82px;
+  gap: 4px;
+  bottom: 8px;
+}
+
+.icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 2px;
+  color: var(--light);
+  text-align: center;
+  cursor: pointer;
+  border: 1px dotted transparent;
+  background: none;
+}
+
+.icon .glyph {
+  font-size: 30px;
+  line-height: 34px;
+  filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.6));
+}
+
+.icon .caption {
+  padding: 0 2px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.icon:focus-visible,
+.icon.selected {
+  border-color: var(--light);
+}
+
+.icon:focus-visible .caption,
+.icon.selected .caption {
+  background: var(--select);
+}
+
+.taskbar {
+  grid-column: 1 / span 2;
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px;
+  border-top: 1px solid var(--hilight);
+  box-shadow: inset 0 1px var(--light);
+  background: var(--face);
+  z-index: 5000;
+  position: relative;
+}
+
+.taskbar .start {
+  font-weight: bold;
+  min-width: 60px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.taskbar .tasks {
+  display: flex;
+  gap: 3px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.taskbar .tasks .btn {
+  min-width: 0;
+  max-width: 150px;
+  flex: 0 1 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.taskbar .tray {
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+.start-menu {
+  position: absolute;
+  bottom: 28px;
+  left: 2px;
+  display: flex;
+  min-width: 200px;
+  z-index: 6000;
+}
+
+.start-menu .stripe {
+  width: 22px;
+  background: linear-gradient(0deg, var(--title-a), var(--title-b));
+  color: var(--light);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-weight: bold;
+  font-size: 14px;
+  padding: 6px 2px;
+}
+
+.start-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 2px;
+  flex: 1;
+}
+
+.start-menu li button {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 6px 12px 6px 6px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.start-menu li button:hover,
+.start-menu li button:focus-visible {
+  background: var(--select);
+  color: var(--light);
+  outline: none;
+}
+
+.start-menu li.sep {
+  border-top: 1px solid var(--shadow);
+  border-bottom: 1px solid var(--light);
+  margin: 2px 0;
+}
+
+/* ------------------------------------------------------------------ Dialoge */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 8000;
+  background: rgba(0, 0, 0, 0.08);
+  padding: 8px;
+}
+
+.overlay.opaque {
+  background: var(--desktop);
+}
+
+.alert-body {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 12px 12px 4px;
+  max-width: 460px;
+}
+
+.alert-icon {
+  font-size: 32px;
+  line-height: 32px;
+  flex-shrink: 0;
+}
+
+.alert-text {
+  white-space: pre-wrap;
+  line-height: 1.4;
+  padding-top: 4px;
+  user-select: text;
+}
+
+.preview-box {
+  background: var(--light);
+  padding: 6px;
+  margin-top: 6px;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 700px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr 30px;
+  }
+
+  .sidebar {
+    grid-row: 1;
+    margin: 4px;
+    max-height: 34vh;
+  }
+
+  .desktop {
+    grid-row: 2;
+    grid-column: 1;
+  }
+
+  .taskbar {
+    grid-row: 3;
+    grid-column: 1;
+  }
+
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .window {
+    left: 2px !important;
+    width: calc(100vw - 4px) !important;
+  }
+}
+
+/* ------------------------------------------------------------------ Boss-Taste (Excel) */
+.boss {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--face);
+  display: flex;
+  flex-direction: column;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+}
+
+.boss .xl-title {
+  background: linear-gradient(90deg, var(--title-a), var(--title-b));
+  color: var(--light);
+  font-weight: bold;
+  padding: 3px 6px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.boss .xl-toolbar {
+  display: flex;
+  gap: 2px;
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--shadow);
+}
+
+.boss .xl-toolbar span {
+  width: 23px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.boss .xl-formula {
+  display: flex;
+  gap: 4px;
+  padding: 3px 4px;
+  align-items: center;
+}
+
+.boss .xl-grid {
+  flex: 1;
+  overflow: auto;
+  background: var(--light);
+  margin: 0 2px;
+}
+
+.boss table {
+  border-collapse: collapse;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+}
+
+.boss th {
+  background: var(--face);
+  font-weight: normal;
+  border: 1px solid var(--shadow);
+  padding: 1px 4px;
+  min-width: 34px;
+}
+
+.boss td {
+  border: 1px solid #c8c8c8;
+  min-width: 86px;
+  height: 18px;
+  padding: 0 3px;
+  white-space: nowrap;
+}
+
+.boss td.n {
+  text-align: right;
+}
+
+.boss td.b {
+  font-weight: bold;
+}
+
+.boss td.sel {
+  outline: 2px solid var(--dark);
+  outline-offset: -2px;
+}
+
+.boss .xl-sheets {
+  display: flex;
+  gap: 0;
+  padding: 0 4px;
+}
+
+.boss .xl-sheets span {
+  padding: 2px 12px;
+  border: 1px solid var(--shadow);
+  border-top: 0;
+  background: var(--face);
+}
+
+.boss .xl-sheets span.on {
+  background: var(--light);
+  font-weight: bold;
+}
+
+/* ------------------------------------------------------------------ Diagramm */
+.chart {
+  background: var(--light);
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chart-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
