@@ -139,6 +139,16 @@ export const JUSTICE_CRIME = [0.2, 0.12, 0.06, 0.03, 0.01];
 export const JUSTICE_EMIGRATION = [0, 0, 0.003, 0.01, 0.02];
 /** Faktor der Gardeabwehr gegen Spione */
 export const JUSTICE_DEFENSE = [0.6, 0.8, 1.0, 1.2, 1.4];
+/**
+ * Pilger: Gold je 1.000 Einwohner und Jahr, multipliziert mit dem Kirchenfaktor
+ * (Kathedralen + Paläste + Bonus für milde Justiz). Pilger wohnen in Herbergen
+ * um die Kathedralen – sie blockieren kein Ackerland und essen kein eigenes Korn.
+ */
+export const PILGRIM_BASE = 200;
+export const PILGRIM_PER_CATHEDRAL = 1;
+export const PILGRIM_PER_PALACE = 0.2;
+/** Pilger fühlen sich unter milder Justiz sicher (Stufe 1–5). */
+export const PILGRIM_JUSTICE_BONUS = [0.6, 0.4, 0, 0, 0];
 /** Frömmigkeit je Justizstufe */
 export const JUSTICE_PIETY = [3, 2, 1, 0, -1];
 

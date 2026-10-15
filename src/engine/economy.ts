@@ -17,6 +17,10 @@ import {
   JUSTICE_CRIME,
   JUSTICE_EMIGRATION,
   JUSTICE_PIETY,
+  PILGRIM_BASE,
+  PILGRIM_JUSTICE_BONUS,
+  PILGRIM_PER_CATHEDRAL,
+  PILGRIM_PER_PALACE,
   LANDLESS_KNIGHT_PAY,
   POP_PER_HECTARE,
   RAT_MAX,
@@ -121,6 +125,20 @@ export interface TaxBreakdown {
   cityBonus: number;
   crimeLoss: number;
   total: number;
+}
+
+/** Kirchenfaktor für Pilger: Kathedralen, Paläste und milde Justiz. */
+export function churchFactor(p: Pick<Player, 'buildings' | 'justice'>): number {
+  return (
+    p.buildings.cathedral * PILGRIM_PER_CATHEDRAL +
+    p.buildings.palace * PILGRIM_PER_PALACE +
+    PILGRIM_JUSTICE_BONUS[p.justice - 1]
+  );
+}
+
+/** Pilger-Einnahmen = (Bevölkerung / 1.000) × Basissatz × Kirchenfaktor */
+export function pilgrimIncome(p: Pick<Player, 'population' | 'buildings' | 'justice'>): number {
+  return Math.round((p.population / 1000) * PILGRIM_BASE * churchFactor(p));
 }
 
 /** Anteil des Handelsvolumens, der bei diesem Satz im Land bleibt (1 beim Referenzsatz). */
@@ -232,7 +250,8 @@ export function calculateEconomyTurn(p: Player, market: MarketState, opts: Econo
 
   // Landlose Ritter fordern Strafsold oder desertieren.
   const landless = landlessKnights(p);
-  const goldBeforeKnights = p.gold + taxes.total - mUpkeep - bUpkeep - loanPayments;
+  const pilgrims = pilgrimIncome(p);
+  const goldBeforeKnights = p.gold + taxes.total + pilgrims - mUpkeep - bUpkeep - loanPayments;
   let landlessPay = 0;
   let deserted = 0;
   if (landless > 0) {
@@ -247,7 +266,7 @@ export function calculateEconomyTurn(p: Player, market: MarketState, opts: Econo
   const ratLoss = Math.round(stored * ratRate * (1 - granaryProtection(p.buildings)));
 
   // Sparzinsen werden dem Sparkonto gutgeschrieben, nicht der Kasse.
-  const netGold = taxes.total - mUpkeep - bUpkeep - loanPayments - landlessPay;
+  const netGold = taxes.total + pilgrims - mUpkeep - bUpkeep - loanPayments - landlessPay;
 
   return {
     year: 0,
@@ -261,6 +280,7 @@ export function calculateEconomyTurn(p: Player, market: MarketState, opts: Econo
     emigrants: pop.emigrants,
     taxIncome: taxes.total,
     taxIntercepted: 0,
+    pilgrimIncome: pilgrims,
     incomeTax: taxes.incomeTax,
     salesTax: taxes.salesTax,
     tolls: taxes.tolls,

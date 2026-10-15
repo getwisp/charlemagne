@@ -178,7 +178,7 @@ export function resolveYear(state: GameState): GameState {
     p.population = Math.max(0, p.population + report.populationAfter - p.population);
     const intercepted = Math.min(p.taxIntercepted ?? 0, Math.max(0, report.taxIncome));
     p.taxIntercepted = 0;
-    p.gold += report.taxIncome - intercepted - report.militaryUpkeep - report.buildingUpkeep - report.landlessKnightPay;
+    p.gold += report.taxIncome - intercepted + report.pilgrimIncome - report.militaryUpkeep - report.buildingUpkeep - report.landlessKnightPay;
     if (report.desertedKnights > 0) {
       p.military.knights -= report.desertedKnights;
       tell(s, p.id, 'Ritter desertieren!', `${report.desertedKnights} landlose Ritter haben Euch verlassen, weil Ihr weder Lehen noch Strafsold bieten konntet.`, 'error');

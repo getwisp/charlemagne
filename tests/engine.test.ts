@@ -4,6 +4,7 @@ import {
   ActionError,
   ARCHETYPES,
   calculateTaxes,
+  pilgrimIncome,
   tradeRetention,
   blockerBoost,
   intrigueTargetScores,
@@ -77,6 +78,22 @@ describe('Wirtschaft', () => {
     // Einkommensteuer: schon unterhalb der alten 25-%-Schwelle kostet jeder Punkt Einwohner
     const emi = (income: number) => calculateEconomyTurn({ ...p, taxes: { ...p.taxes, income } }, s.market).emigrants;
     expect(emi(22)).toBeGreaterThan(emi(18));
+  });
+
+  it('Pilger: je 1.000 Einwohner × Kirchenfaktor, fließen in den Haushalt', () => {
+    const s = game();
+    const p = s.players[0];
+    p.population = 5000;
+    p.justice = 3;
+    expect(pilgrimIncome(p)).toBe(0); // ohne Kathedrale, Palast oder milde Justiz keine Pilger
+    p.buildings.cathedral = 1;
+    p.buildings.palace = 2;
+    const gerecht = pilgrimIncome(p);
+    expect(gerecht).toBe(Math.round(5 * 200 * 1.4));
+    expect(pilgrimIncome({ ...p, justice: 1 })).toBeGreaterThan(gerecht);
+    const preview = calculateEconomyTurn(p, s.market);
+    expect(preview.pilgrimIncome).toBe(gerecht);
+    expect(preview.netGold).toBe(preview.taxIncome + gerecht - preview.militaryUpkeep - preview.buildingUpkeep - preview.loanPayments - preview.landlessKnightPay);
   });
 
   it('Kornspeicher mindern den Rattenfraß', () => {

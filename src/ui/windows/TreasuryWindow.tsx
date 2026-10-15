@@ -44,7 +44,7 @@ export function TreasuryWindow() {
         </div>
         <div className="hint">
           Kriminalität kostet derzeit {Math.round(JUSTICE_CRIME[me.justice - 1] * 100)} % der Steuern. Harte Justiz senkt Kriminalität und stärkt die Garde gegen Spione, vertreibt aber Bürger und
-          kostet Frömmigkeit. Milde Justiz gefällt den Kirchenfürsten.
+          kostet Frömmigkeit. Milde Justiz gefällt den Kirchenfürsten und lockt Pilger an.
         </div>
       </GroupBox>
 
@@ -89,6 +89,14 @@ export function TreasuryWindow() {
                 <Money value={-preview.militaryUpkeep} signed />
               </td>
             </tr>
+            {preview.pilgrimIncome > 0 && (
+              <tr>
+                <td>Pilger &amp; Spenden</td>
+                <td className="num">
+                  <Money value={preview.pilgrimIncome} signed />
+                </td>
+              </tr>
+            )}
             <tr>
               <td>Unterhalt Gebäude</td>
               <td className="num">

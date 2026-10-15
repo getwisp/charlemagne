@@ -85,6 +85,8 @@ export interface YearReport {
   taxIncome: number;
   /** Davon von Dieben abgefangen */
   taxIntercepted: number;
+  /** Spenden der Pilger */
+  pilgrimIncome: number;
   incomeTax: number;
   salesTax: number;
   tolls: number;
