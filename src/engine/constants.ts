@@ -111,6 +111,15 @@ export const BUILDINGS: Record<
 export const CITY_MARKETS = 5;
 export const CITY_MILLS = 3;
 export const CITY_TAX_BONUS = 0.1;
+/** Ab dieser Stadt bringt jede weitere nur noch CITY_TAX_BONUS_LATE (Infinity = immer voller Bonus). */
+export const CITY_BONUS_FULL_CITIES = Infinity;
+export const CITY_TAX_BONUS_LATE = 0.05;
+/** Obergrenze des gesamten Stadt-Bonus (Infinity = ohne Deckel). */
+export const CITY_BONUS_CAP = Infinity;
+/** Stadt-Bonus nur auf Mehrwertsteuer und Zölle statt auf alle Steuern. */
+export const CITY_BONUS_TRADE_ONLY = false;
+/** Einwohner, die ein Markt oder eine Mühle für volle Auslastung braucht (0 = keine Kopplung). */
+export const CITIZENS_PER_TRADE_BUILDING = 0;
 
 // ---------------------------------------------------------------- Steuern
 export const TAX_LIMITS = { income: 50, sales: 30, tolls: 30 } as const;

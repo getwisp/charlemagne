@@ -29,6 +29,7 @@ import {
   freeLand,
   grainNeed,
   loanPaymentsDue,
+  tradeStaffing,
   militaryUpkeep,
   score,
 } from './economy';
@@ -365,6 +366,11 @@ function knightPipeline(s: GameState, p: Player, wanted: number, spend: number):
 }
 
 // ------------------------------------------------------------ Utility-Investitionen
+/** Auslastung nach dem Bau eines weiteren Markts oder einer Mühle (mind. 0,2, damit Städte erreichbar bleiben). */
+function nextTradeStaffing(p: Player): number {
+  return Math.max(0.2, tradeStaffing({ ...p, buildings: { ...p.buildings, market: p.buildings.market + 1 } }));
+}
+
 interface Option {
   name: string;
   utility: number; // 0–100
@@ -382,8 +388,9 @@ function generalInvestments(s: GameState, p: Player, w: Weights): void {
     const landUtility = deficitShare > 0.1 ? 50 + Math.min(40, deficitShare * 60) : freeLand(p) < farmlandTarget(p) ? 45 : 20;
     const hasOpenGoal = nextTitleRequirements(p).some((r) => !r.met);
     const options: Option[] = [
-      { name: 'Markt', utility: 60, weight: w.economy * blockerBoost(p, ['market', 'cities']), run: () => tryBuild(s, p, 'market', spend) },
-      { name: 'Mühle', utility: p.buildings.mill * CITY_MARKETS < p.buildings.market * CITY_MILLS ? 62 : 45, weight: w.economy * blockerBoost(p, ['mill', 'cities']), run: () => tryBuild(s, p, 'mill', spend) },
+      // Die KI kennt die Auslastung: In menschenleeren Städten bringt ein weiterer Stand wenig.
+      { name: 'Markt', utility: 60 * nextTradeStaffing(p), weight: w.economy * blockerBoost(p, ['market', 'cities']), run: () => tryBuild(s, p, 'market', spend) },
+      { name: 'Mühle', utility: (p.buildings.mill * CITY_MARKETS < p.buildings.market * CITY_MILLS ? 62 : 45) * nextTradeStaffing(p), weight: w.economy * blockerBoost(p, ['mill', 'cities']), run: () => tryBuild(s, p, 'mill', spend) },
       { name: 'Kornspeicher', utility: ratRisk && p.buildings.granary < 3 ? 50 : 5, weight: w.economy, run: () => tryBuild(s, p, 'granary', spend) },
       { name: 'Land', utility: landUtility, weight: w.land * blockerBoost(p, ['land', 'population']), run: () => attempt(() => mut.buyLand(s, p.id, Math.floor((spend * 0.6) / s.market.landPrice))) },
       { name: 'Kathedrale', utility: p.title >= T.GRAF ? 40 : 0, weight: w.piety * blockerBoost(p, ['cathedral']), run: () => tryBuild(s, p, 'cathedral', spend) },
