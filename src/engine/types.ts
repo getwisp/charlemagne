@@ -95,6 +95,14 @@ export interface YearReport {
   netGold: number;
 }
 
+export interface SpyIntel {
+  year: number;
+  guards: number;
+  justice: number;
+  gold: number;
+  army: number;
+}
+
 export interface Player {
   id: string;
   name: string;
@@ -146,6 +154,10 @@ export interface Player {
   lastReport: YearReport | null;
   /** Ernte des aktuellen Jahres (für Anzeige). */
   harvestThisYear: number;
+  /** Im letzten Jahreswechsel per Raub erbeutetes Gold (KI: Blutgeld-Investition). */
+  loot?: number;
+  /** Erkenntnisse aus erfolgreicher Spionage (exakte Werte zum Zeitpunkt des Berichts). */
+  intel?: Record<string, SpyIntel>;
   /** Menschlicher Spieler hat seinen Zug beendet. */
   turnDone: boolean;
 }

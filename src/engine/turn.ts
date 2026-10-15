@@ -73,6 +73,7 @@ function createPlayer(setup: PlayerSetup, index: number): Player {
     history: [],
     lastReport: null,
     harvestThisYear: 0,
+    loot: 0,
     turnDone: false,
   };
 }

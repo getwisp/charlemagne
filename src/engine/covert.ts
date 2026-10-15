@@ -94,11 +94,19 @@ export function resolveCovert(s: GameState, a: CovertAction): boolean {
   switch (a.mission) {
     case 'spy':
       tell(s, from.id, `Spionagebericht: ${target.name}`, spyReport(target), 'info');
+      (from.intel ??= {})[target.id] = {
+        year: s.year,
+        guards: target.military.guards,
+        justice: target.justice,
+        gold: Math.max(0, target.gold),
+        army: target.military.mercenaries + target.military.cannons + target.military.squires + target.military.knights,
+      };
       break;
     case 'rob': {
       const stolen = Math.round(Math.max(0, target.gold) * randFloat(s, 0.1, 0.25));
       target.gold -= stolen;
       from.gold += stolen;
+      from.loot = (from.loot ?? 0) + stolen;
       tell(s, from.id, 'Raubzug erfolgreich', `Eure Diebe haben ${fmt(stolen)} Taler aus der Schatzkammer von ${target.name} erbeutet.`, 'good');
       tell(s, target.id, 'Raub!', `Unbekannte haben ${fmt(stolen)} Taler aus Eurer Schatzkammer gestohlen.`, 'error');
       break;

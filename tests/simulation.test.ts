@@ -38,6 +38,27 @@ describe('KI-Simulation', () => {
     expect(JSON.stringify(a.players)).toBe(JSON.stringify(b.players));
   });
 
+  it.runIf(process.env.SIM_SUMMARY)('Archetypen-Statistik über viele Seeds', () => {
+    const seeds = Number(process.env.SIM_SUMMARY) || 30;
+    const names = ['Pfeffersack', 'Kriegstreiber', 'Ränkeschmiedin', 'Kirchenfürst'];
+    const wins = [0, 0, 0, 0];
+    const titleSum = [0, 0, 0, 0];
+    const emperor = [0, 0, 0, 0];
+    let years = 0;
+    for (let seed = 1; seed <= seeds; seed++) {
+      const s = runAiGame(seed, 120);
+      years += s.year - 1700;
+      const w = s.players.findIndex((p) => p.id === s.winnerId);
+      wins[w]++;
+      if (s.players[w].title === 8) emperor[w]++;
+      s.players.forEach((p, i) => (titleSum[i] += Math.min(p.title, 7)));
+    }
+    console.log(`\n${seeds} Partien, Ø Dauer ${(years / seeds).toFixed(0)} Jahre`);
+    names.forEach((n, i) =>
+      console.log(`  ${n.padEnd(15)} Siege ${String(wins[i]).padStart(2)} (Kaiser ${emperor[i]})  Ø Endtitel ${(titleSum[i] / seeds).toFixed(2)}`),
+    );
+  });
+
   it.runIf(process.env.SIM_REPORT)('Balancing-Report', () => {
     for (const seed of [1, 2, 3, 4, 5]) {
       const s = runAiGame(seed, 120);

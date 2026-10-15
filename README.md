@@ -9,6 +9,7 @@ npm run dev        # Entwicklungsserver (http://localhost:5173)
 npm test           # Engine- und KI-Tests
 npm run build      # Typecheck + Produktions-Build nach dist/
 SIM_REPORT=1 npm run sim   # Balancing-Report: 5 komplette KI-Partien
+SIM_SUMMARY=30 npm run sim # Siege und Ø-Endtitel je Archetyp über 30 Seeds
 ```
 
 ## Architektur

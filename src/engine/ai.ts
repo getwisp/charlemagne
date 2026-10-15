@@ -16,12 +16,15 @@ import {
   KNIGHT_MIN_XP,
   T,
   UNITS,
+  YIELD_PER_HECTARE,
+  type TitleRequirements,
 } from './constants';
-import { covertChance } from './covert';
+import { COVERT_BASE_DEFENSE, COVERT_DEFENSE_PER_GUARD, JUSTICE_DEFENSE } from './constants';
 import {
   buildingUpkeep,
   calculateEconomyTurn,
   creditLimit,
+  expectedHarvest,
   freeLand,
   grainNeed,
   loanPaymentsDue,
@@ -29,10 +32,10 @@ import {
   score,
 } from './economy';
 import { armySize, attackPower, defenseBonus, defensePower, maneuverCost, morale } from './military';
-import { publicArmyEstimate } from './intel';
+import { publicArmyEstimate, publicInfo } from './intel';
 import { chance, random } from './rng';
 import { nextTitleRequirements, type RequirementStatus } from './titles';
-import type { Archetype, BuildingType, CovertMission, GameState, Player } from './types';
+import type { Archetype, BuildingType, CovertMission, GameState, Player, SpyIntel } from './types';
 import { clone, getPlayer } from './util';
 
 type Weights = (typeof ARCHETYPES)[Archetype]['weights'];
@@ -60,6 +63,54 @@ function budget(p: Player): number {
   return Math.max(0, p.gold - reserve(p));
 }
 
+/**
+ * Ist eine Ressource der einzige Grund, warum die KI nicht aufsteigt, überschreibt
+ * dieser Multiplikator kurzzeitig die Charakter-Gewichtung.
+ */
+export const TITLE_BLOCKER_MULTIPLIER = 3.0;
+
+/** Charakter-Gewichte je nach Spielphase. */
+export function effectiveWeights(p: Player, base: Weights): Weights {
+  const w = { ...base };
+  // Kathedralen verlangt erst der Kurfürst. Bis dahin wird nicht auf sie gespart:
+  // Wachstum, Land und die ersten Städte zuerst.
+  if (p.title < T.HERZOG) {
+    w.piety *= 0.5;
+    if (p.archetype === 'kirchenfuerst') w.economy += 0.4;
+  }
+  return w;
+}
+
+/**
+ * Verstärkung für Aktionen, die eine offene Titel-Voraussetzung bedienen:
+ * einziger Blocker → TITLE_BLOCKER_MULTIPLIER, größter Engpass → 2, sonstige offene → 1,5.
+ */
+export function blockerBoost(p: Player, keys: (keyof TitleRequirements)[]): number {
+  const open = nextTitleRequirements(p).filter((r) => !r.met);
+  const hits = open.filter((r) => keys.includes(r.key));
+  if (hits.length === 0) return 1;
+  if (open.length === 1) return TITLE_BLOCKER_MULTIPLIER;
+  const worst = open.reduce((a, b) => (b.progress < a.progress ? b : a));
+  return hits.includes(worst) ? 2 : 1.5;
+}
+
+/** Erwartetes Korndefizit (Scheffel), das jedes Jahr zugekauft werden muss. */
+function grainDeficit(p: Player): number {
+  const ration = Math.max(100, p.ration);
+  return Math.max(0, (grainNeed(p) * ration) / 100 - expectedHarvest(p, 1));
+}
+
+/** Ackerland, das die eigene Ration aus eigener Ernte deckt. */
+function farmlandTarget(p: Player): number {
+  return Math.min(p.population * HECTARES_PER_FARMER, Math.ceil((grainNeed(p) * Math.max(100, p.ration)) / 100 / YIELD_PER_HECTARE));
+}
+
+/** Holt fehlendes Geld vom Sparkonto, statt es dort zu horten. */
+function fund(s: GameState, p: Player, amount: number): void {
+  const missing = amount - budget(p);
+  if (missing > 0 && p.savings > 0) attempt(() => mut.withdraw(s, p.id, Math.min(p.savings, Math.ceil(missing))));
+}
+
 export function planAiTurn(state: GameState, playerId: string): GameState {
   const s = clone(state);
   const p = me(s, playerId);
@@ -70,12 +121,18 @@ export function planAiTurn(state: GameState, playerId: string): GameState {
     return s;
   }
   const arch = ARCHETYPES[p.archetype ?? 'pfeffersack'];
-  const w = arch.weights;
+  const w = effectiveWeights(p, arch.weights);
+  // Blutgeld: Beute aus dem letzten Raubzug sofort in Land und Städte stecken.
+  const loot = p.loot ?? 0;
+  p.loot = 0;
 
   setPolicies(s, p, w);
   survival(s, p, arch.ration);
   speculation(s, p, w);
+  // Die Ränkeschmiedin bezahlt ihre Agenten, bevor der Rest in Titel fließt.
+  if (p.archetype === 'raenkeschmiedin' && s.year > s.startYear) leaderIntrigue(s, p, w);
   titleFocus(s, p, w);
+  if (loot > 0) investBloodMoney(s, p, loot);
   generalInvestments(s, p, w);
   militaryAndIntrigue(s, p, w);
   electionPolitics(s, p);
@@ -110,7 +167,9 @@ function setPolicies(s: GameState, p: Player, w: Weights): void {
 // ------------------------------------------------------------ 1. Überleben
 function survival(s: GameState, p: Player, ration: number): void {
   const need = grainNeed(p);
-  attempt(() => mut.setRation(s, p.id, ration));
+  // Wer sein Korn zukaufen muss, füttert kein Bevölkerungswachstum auf Pump.
+  const importing = grainDeficit({ ...p, ration: 100 } as Player) > need * 0.15;
+  attempt(() => mut.setRation(s, p.id, importing ? Math.min(ration, 100) : ration));
   let wanted = Math.ceil((need * p.ration) / 100);
   if (p.grain < wanted) {
     const missing = wanted - p.grain;
@@ -178,11 +237,13 @@ function ensureFreeLand(s: GameState, p: Player, ha: number, maxSpend: number): 
 function tryBuild(s: GameState, p: Player, type: BuildingType, maxSpend: number): boolean {
   if (p.title < BUILDINGS[type].minTitle) return false;
   const def = BUILDINGS[type];
-  // Etwas Puffer, damit die Felder nicht völlig verschwinden.
-  const farmBuffer = Math.min(p.population * HECTARES_PER_FARMER * 0.3, 1500);
+  // Nicht die eigenen Felder zubauen: genug Ackerland für die Ernährung behalten.
+  const farmBuffer = Math.min(farmlandTarget(p) * 0.6, Math.max(1500, freeLand(p) - HECTARES_PER_BUILDING));
   const landNeeded = HECTARES_PER_BUILDING + farmBuffer;
   const landCost = Math.max(0, landNeeded - freeLand(p)) * s.market.landPrice;
-  if (def.cost + landCost > Math.min(maxSpend, budget(p))) return false;
+  if (def.cost + landCost > maxSpend) return false;
+  fund(s, p, def.cost + landCost);
+  if (def.cost + landCost > budget(p)) return false;
   if (!ensureFreeLand(s, p, landNeeded, maxSpend - def.cost)) return false;
   return attempt(() => mut.build(s, p.id, type, 1));
 }
@@ -192,13 +253,21 @@ function titleFocus(s: GameState, p: Player, w: Weights): void {
   for (let round = 0; round < 4; round++) {
     const b = bottleneck(p);
     if (!b) return;
-    const spend = budget(p) * 0.8;
-    if (spend < 500) return;
+    const boost = blockerBoost(p, [b.key]);
+    const sole = boost >= TITLE_BLOCKER_MULTIPLIER;
+    // Engpass-Scanner: Ersparnisse fließen in den Titel statt aufs Konto.
+    if (boost >= 2) fund(s, p, budget(p) + p.savings * (sole ? 0.9 : 0.5));
+    const spend = budget(p) * (sole ? 0.95 : 0.8);
+    if (spend < 500 && !sole) return;
     let progressed = false;
     switch (b.key) {
       case 'land': {
-        const ha = Math.min(b.required - b.current + 500, Math.floor(spend / s.market.landPrice));
-        if (ha > 0 && s.market.landPrice <= 30 + 10 * (w.land - 1)) progressed = attempt(() => mut.buyLand(s, p.id, ha));
+        const missing = b.required - b.current + 500;
+        // Als einziger Blocker wird Land notfalls auf Kredit gekauft und nicht auf Schnäppchen gewartet.
+        if (sole && missing * s.market.landPrice > spend) financeTitle(s, p, missing * s.market.landPrice - spend);
+        const ha = Math.min(missing, Math.floor((sole ? budget(p) * 0.95 : spend) / s.market.landPrice));
+        const maxPrice = sole ? Infinity : 30 + 10 * (w.land - 1);
+        if (ha > 0 && s.market.landPrice <= maxPrice) progressed = attempt(() => mut.buyLand(s, p.id, ha));
         break;
       }
       case 'population': {
@@ -222,6 +291,10 @@ function titleFocus(s: GameState, p: Player, w: Weights): void {
       case 'palace':
       case 'cathedral':
         progressed = tryBuild(s, p, b.key, spend);
+        if (!progressed && sole) {
+          financeTitle(s, p, BUILDINGS[b.key].cost + HECTARES_PER_BUILDING * s.market.landPrice);
+          progressed = tryBuild(s, p, b.key, budget(p));
+        }
         break;
       case 'cities': {
         const needMarkets = p.buildings.market < CITY_MARKETS * (b.current + 1);
@@ -238,6 +311,16 @@ function titleFocus(s: GameState, p: Player, w: Weights): void {
     }
     if (!progressed) return;
   }
+}
+
+/** Kredit für den letzten fehlenden Baustein zum Titel – nur maßvoll und solange die Raten tragbar sind. */
+function financeTitle(s: GameState, p: Player, gap: number): void {
+  if (p.loans.length >= 2) return;
+  const preview = calculateEconomyTurn(p, s.market);
+  const amount = Math.min(Math.ceil(gap), Math.floor(creditLimit(p, s.market) * 0.5));
+  // Die Jahresrate (5 Jahre) darf höchstens die Hälfte des Überschusses fressen.
+  if (amount < 1000 || amount / 4 > Math.max(0, preview.netGold) * 0.5) return;
+  attempt(() => mut.takeLoan(s, p.id, amount, 5));
 }
 
 /** Knappen anheuern → Manöver → Ritterschlag */
@@ -272,16 +355,20 @@ function generalInvestments(s: GameState, p: Player, w: Weights): void {
   for (let i = 0; i < 3; i++) {
     const spend = budget(p) * 0.6;
     if (spend < 2000) return;
-    const farmShortage = p.population * HECTARES_PER_FARMER > freeLand(p);
     const ratRisk = p.grain > grainNeed(p) * 0.8;
+    // Kornimporte fressen das Budget: Ackerland zahlt doppelt (Ernte + Titel-Land).
+    const deficitShare = grainDeficit(p) / Math.max(1, grainNeed(p));
+    const landUtility = deficitShare > 0.1 ? 50 + Math.min(40, deficitShare * 60) : freeLand(p) < farmlandTarget(p) ? 45 : 20;
+    const hasOpenGoal = nextTitleRequirements(p).some((r) => !r.met);
     const options: Option[] = [
-      { name: 'Markt', utility: 60, weight: w.economy, run: () => tryBuild(s, p, 'market', spend) },
-      { name: 'Mühle', utility: p.buildings.mill * CITY_MARKETS < p.buildings.market * CITY_MILLS ? 62 : 45, weight: w.economy, run: () => tryBuild(s, p, 'mill', spend) },
+      { name: 'Markt', utility: 60, weight: w.economy * blockerBoost(p, ['market', 'cities']), run: () => tryBuild(s, p, 'market', spend) },
+      { name: 'Mühle', utility: p.buildings.mill * CITY_MARKETS < p.buildings.market * CITY_MILLS ? 62 : 45, weight: w.economy * blockerBoost(p, ['mill', 'cities']), run: () => tryBuild(s, p, 'mill', spend) },
       { name: 'Kornspeicher', utility: ratRisk && p.buildings.granary < 3 ? 50 : 5, weight: w.economy, run: () => tryBuild(s, p, 'granary', spend) },
-      { name: 'Land', utility: farmShortage ? 55 : 20, weight: w.land, run: () => attempt(() => mut.buyLand(s, p.id, Math.floor((spend * 0.5) / s.market.landPrice))) },
-      { name: 'Kathedrale', utility: p.title >= T.GRAF ? 40 : 0, weight: w.piety, run: () => tryBuild(s, p, 'cathedral', spend) },
-      { name: 'Palast', utility: p.title >= T.BARON && p.buildings.palace < 2 ? 35 : 10, weight: w.military * 0.7 + 0.3, run: () => tryBuild(s, p, 'palace', spend) },
-      { name: 'Sparen', utility: 20 + (s.market.baseRate - 5) * 4, weight: 1, run: () => attempt(() => mut.deposit(s, p.id, Math.floor(spend * 0.3))) },
+      { name: 'Land', utility: landUtility, weight: w.land * blockerBoost(p, ['land', 'population']), run: () => attempt(() => mut.buyLand(s, p.id, Math.floor((spend * 0.6) / s.market.landPrice))) },
+      { name: 'Kathedrale', utility: p.title >= T.GRAF ? 40 : 0, weight: w.piety * blockerBoost(p, ['cathedral']), run: () => tryBuild(s, p, 'cathedral', spend) },
+      { name: 'Palast', utility: p.title >= T.BARON && p.buildings.palace < 2 ? 35 : 10, weight: (w.military * 0.7 + 0.3) * blockerBoost(p, ['palace']), run: () => tryBuild(s, p, 'palace', spend) },
+      // Wer ein offenes Titelziel hat, hortet nicht.
+      { name: 'Sparen', utility: (hasOpenGoal ? 8 : 20) + (s.market.baseRate - 5) * 4, weight: 1, run: () => attempt(() => mut.deposit(s, p.id, Math.floor(spend * 0.3))) },
     ];
     // Etwas Zufall – Menschen sind auch nicht perfekt.
     const ranked = options
@@ -296,6 +383,27 @@ function generalInvestments(s: GameState, p: Player, w: Weights): void {
       }
     }
     if (!done) return;
+  }
+}
+
+/**
+ * Blutgeld: Gestohlenes Gold wird sofort in greifbare Werte verwandelt – bevorzugt in das,
+ * was zum nächsten Titel fehlt, sonst in Land und Städtebau.
+ */
+function investBloodMoney(s: GameState, p: Player, loot: number): void {
+  let left = Math.min(loot, budget(p));
+  for (let i = 0; i < 4 && left > 1000; i++) {
+    const before = p.gold;
+    const b = bottleneck(p);
+    const cityType: BuildingType = p.buildings.mill * CITY_MARKETS < p.buildings.market * CITY_MILLS ? 'mill' : 'market';
+    const type: BuildingType | null =
+      b && (b.key === 'market' || b.key === 'mill' || b.key === 'palace' || b.key === 'cathedral') ? b.key : b?.key === 'cities' ? cityType : null;
+    let ok = false;
+    if (type) ok = tryBuild(s, p, type, left);
+    if (!ok && b?.key !== 'land') ok = tryBuild(s, p, cityType, left);
+    if (!ok) ok = attempt(() => mut.buyLand(s, p.id, Math.floor(left / s.market.landPrice)));
+    if (!ok) return;
+    left -= before - p.gold;
   }
 }
 
@@ -342,14 +450,18 @@ function militaryAndIntrigue(s: GameState, p: Player, w: Weights): void {
     0,
     ...s.players
       .filter((o) => o.id !== p.id)
-      .map((o) => publicArmyEstimate(o) * ((p.grudges[o.id] ?? 0) >= 40 ? 0.8 : 0.45) * (0.6 + 0.4 * w.military)),
+      // Wer einen Casus Belli gegen uns hat, wurde uns vom Herold genannt – mit ihm ist zu rechnen.
+      .map((o) => {
+        const hostile = (p.grudges[o.id] ?? 0) >= 40 || o.casusBelli.includes(p.id);
+        return publicArmyEstimate(o) * (hostile ? 0.85 : 0.45) * (hostile ? 1 : 0.6 + 0.4 * w.military);
+      }),
   );
   const myDefense = defensePower(p);
   if (myDefense < threat * 0.9) {
     const perMerc = Math.max(0.5, morale(p) * m.training * defenseBonus(p));
     const n = Math.min(Math.ceil((threat * 0.9 - myDefense) / perMerc), Math.floor((budget(p) * 0.4) / UNITS.mercenaries.cost));
     if (n > 0) attempt(() => mut.recruit(s, p.id, 'mercenaries', n));
-    const hated = Object.values(p.grudges).some((g) => g >= 40);
+    const hated = Object.values(p.grudges).some((g) => g >= 40) || s.players.some((o) => o.casusBelli.includes(p.id));
     if (hated && defensePower(p) < threat && chance(s, 0.5)) attempt(() => mut.setEntrenched(s, p.id, true));
   }
   if (w.military > 1.2 && !p.maneuver && maneuverCost(p) < budget(p) * 0.2) attempt(() => mut.setManeuver(s, p.id, true));
@@ -357,6 +469,7 @@ function militaryAndIntrigue(s: GameState, p: Player, w: Weights): void {
   if (w.military > 1.2 && p.title >= T.GRAF) knightPipeline(s, p, 10, budget(p) * 0.3);
 
   if (s.year === s.startYear) return;
+  if (p.archetype === 'raenkeschmiedin') return; // intrigiert bereits vor den Investitionen
   const enemies = hostility(s, p).filter((h) => h.value > 10);
   if (enemies.length === 0) return;
 
@@ -382,11 +495,78 @@ function militaryAndIntrigue(s: GameState, p: Player, w: Weights): void {
   if (!chance(s, pCovert)) return;
   const gold = Math.floor(budget(p) * 0.15 * w.espionage);
   if (gold < 300) return;
-  // Ränkeschmiedin wählt die härteste verfügbare Mission, andere eher Raub/Sabotage.
   let mission = missions[0];
-  if (mission === 'assassinate' && (w.espionage < 1.5 || top.value < 60)) mission = missions[1] ?? 'rob';
-  if (covertChance(gold, top.target, mission) < 0.15 && mission !== 'spy') mission = missions[missions.length - 1];
+  if (mission === 'assassinate' && top.value < 60) mission = missions[1] ?? 'rob';
+  if (gold < estimatedCovertDefense(top.target) * 0.2 && mission !== 'spy') mission = missions[missions.length - 1];
   attempt(() => mut.queueCovert(s, p.id, top.target.id, mission, gold, chance(s, 0.5) ? 'mill' : 'grain'));
+}
+
+/**
+ * Abwehr eines Ziels, geschätzt aus öffentlichen Daten (Bevölkerung, Justiz unbekannt → gerecht).
+ * Die KI kennt die Gardestärke so wenig wie der Mensch.
+ */
+function estimatedCovertDefense(t: Player, intel?: SpyIntel): number {
+  if (intel) return COVERT_BASE_DEFENSE + intel.guards * 1.1 * COVERT_DEFENSE_PER_GUARD * JUSTICE_DEFENSE[intel.justice - 1];
+  const pop = publicInfo(t).population;
+  // Vorsichtig schätzen: KI-Fürsten halten etwa einen Gardisten je 40 Bürger.
+  return COVERT_BASE_DEFENSE + (pop / 40) * COVERT_DEFENSE_PER_GUARD * 1.2;
+}
+
+/**
+ * Ränkeschmiedin: Gummiband gegen den Führenden. 90 % ihrer Intrigen treffen den
+ * Punktbesten; Raub bevorzugt, weil die Beute als Blutgeld ihr eigenes Wachstum finanziert.
+ */
+function leaderIntrigue(s: GameState, p: Player, w: Weights): void {
+  const rivals = s.players.filter((o) => o.id !== p.id);
+  if (rivals.length === 0) return;
+  const leader = [...rivals].sort((a, b) => score(b) - score(a))[0];
+  const grudge = hostility(s, p)[0];
+  const target = chance(s, 0.9) || !grudge ? leader : grudge.target;
+  const available = (['rob', 'sabotage', 'assassinate', 'spy'] as CovertMission[]).filter((k) => p.title >= COVERT[k].minTitle);
+  if (available.length === 0) return;
+
+  const ahead = score(target) / Math.max(1, score(p));
+  // Je weiter der Führende enteilt, desto häufiger und härter wird intrigiert.
+  const pCovert = Math.min(0.95, 0.35 * w.espionage * Math.max(0.5, ahead));
+  if (!chance(s, pCovert)) return;
+
+  const intel = p.intel?.[target.id];
+  const fresh = intel && s.year - intel.year <= 3 ? intel : undefined;
+  const defense = estimatedCovertDefense(target, fresh);
+  // Wie gefährlich ist eine Enttarnung? Ein überlegenes Heer mit Casus Belli kostet Land.
+  const exposureRisk = Math.min(1, publicArmyEstimate(target) / Math.max(1, defensePower(p)));
+  const confess = fresh ? 0.25 + 0.1 * (fresh.justice - 1) : 0.45;
+
+  const nearCrown = target.title >= T.KURFUERST || (s.election?.candidates.includes(target.id) ?? false);
+  // Einen Gegner mit überlegenem Heer reizt sie nur, wenn er kurz vor der Krone steht.
+  if (exposureRisk > 0.8 && !nearCrown) return;
+
+  let mission: CovertMission;
+  if (!fresh && available.includes('spy')) mission = 'spy'; // erst auskundschaften, dann zuschlagen
+  else {
+    mission = available.includes('rob') ? 'rob' : 'spy';
+    if (available.includes('assassinate') && nearCrown && chance(s, 0.5)) mission = 'assassinate';
+    else if (available.includes('sabotage') && ahead > 1.3 && chance(s, 0.3)) mission = 'sabotage';
+  }
+
+  // Einsatz so wählen, dass die Chance bei ~60 % liegt – mit zu wenig Gold gar nicht erst anfangen.
+  const gold = Math.floor(Math.min(budget(p) * 0.4, defense * 1.5));
+  if (gold < 300 || gold < defense * 0.9) return;
+  const pSuccess = Math.min(COVERT[mission].maxChance, gold / (gold + defense));
+  if (mission === 'rob') {
+    // Erwartungswert: Beute (~17,5 % der Kasse) gegen Einsatz und das Risiko eines Rachefeldzugs.
+    const cash = fresh ? fresh.gold : publicInfo(target).population * 4;
+    const expectedLoot = pSuccess * cash * 0.175;
+    const expectedPenalty = (1 - pSuccess) * confess * exposureRisk * p.land * 0.15 * s.market.landPrice;
+    if (expectedLoot < gold + expectedPenalty) {
+      // Raub lohnt nicht? Dann den Führenden wenigstens ausbremsen.
+      if (!available.includes('sabotage') || ahead < 1.1) return;
+      mission = 'sabotage';
+    }
+  } else if (exposureRisk > 1.2 && mission !== 'spy' && chance(s, 0.6)) {
+    return; // Gegen einen übermächtigen Gegner ist Abwarten klüger.
+  }
+  attempt(() => mut.queueCovert(s, p.id, target.id, mission, gold, chance(s, 0.6) ? 'mill' : 'market'));
 }
 
 // ------------------------------------------------------------ Reichstag

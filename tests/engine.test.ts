@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   actions,
   ActionError,
+  ARCHETYPES,
+  blockerBoost,
+  effectiveWeights,
+  resolveCovert,
+  TITLE_BLOCKER_MULTIPLIER,
   BISHOP_MIN_SCORE,
   calculateEconomyTurn,
   canBePromoted,
@@ -313,5 +318,59 @@ describe('KI', () => {
     const s = game();
     s.players[0].gold = 0;
     expect(() => mut.buyLand(s, 'p1', 1000)).toThrow(ActionError);
+  });
+
+  it('Engpass-Multiplikator: einziger Blocker ×3, größter Engpass ×2, sonst ×1,5', () => {
+    const s = game();
+    const p = s.players[0];
+    // Freiherr: Land 12.000, Bevölkerung 2.500, 1 Markt
+    p.land = 12000;
+    p.population = 2500;
+    expect(blockerBoost(p, ['market'])).toBe(TITLE_BLOCKER_MULTIPLIER);
+    p.land = 6000;
+    expect(blockerBoost(p, ['market'])).toBe(2); // 0 % erfüllt = größter Engpass
+    expect(blockerBoost(p, ['land'])).toBe(1.5);
+    expect(blockerBoost(p, ['cathedral'])).toBe(1);
+  });
+
+  it('Kirchenfürst spart im Early Game nicht auf Kathedralen', () => {
+    const s = game();
+    const p = { ...s.players[0], archetype: 'kirchenfuerst' as const };
+    const base = ARCHETYPES.kirchenfuerst.weights;
+    expect(effectiveWeights({ ...p, title: T.BARON }, base).piety).toBe(base.piety / 2);
+    expect(effectiveWeights({ ...p, title: T.BARON }, base).economy).toBeGreaterThan(base.economy);
+    expect(effectiveWeights({ ...p, title: T.HERZOG }, base).piety).toBe(base.piety);
+  });
+
+  it('Ränkeschmiedin investiert Raubbeute (Blutgeld) sofort', () => {
+    let s = game(2);
+    s.year += 2;
+    const r = s.players[1];
+    r.archetype = 'raenkeschmiedin';
+    r.title = T.GRAF;
+    s.players[0].military.guards = 0;
+    s.players[0].gold = 200000;
+    s.rng = 1;
+    let robbed = false;
+    for (let i = 0; i < 20 && !robbed; i++) robbed = resolveCovert(s, { kind: 'covert', id: 'c', from: r.id, target: 'p1', mission: 'rob', gold: 100000 });
+    expect(robbed).toBe(true);
+    expect(r.loot).toBeGreaterThan(0);
+    // Vergleich: identischer Zustand, aber ohne gemerkte Beute
+    const noLoot = structuredClone(s);
+    noLoot.players[1].loot = 0;
+    const withLoot = planAiTurn(s, r.id).players[1];
+    const without = planAiTurn(noLoot, r.id).players[1];
+    const value = (p: typeof r) => p.land * s.market.landPrice + (p.buildings.market + p.buildings.mill) * 3500;
+    expect(withLoot.loot).toBe(0);
+    expect(value(withLoot)).toBeGreaterThan(value(without));
+  });
+
+  it('erfolgreiches Ausspähen hinterlegt exakte Werte als Intel', () => {
+    const s = game(2);
+    s.players[1].military.guards = 0;
+    let ok = false;
+    for (let i = 0; i < 20 && !ok; i++) ok = resolveCovert(s, { kind: 'covert', id: 'c', from: 'p1', target: 'p2', mission: 'spy', gold: 100000 });
+    expect(s.players[0].intel?.p2?.guards).toBe(0);
+    expect(s.players[0].intel?.p2?.year).toBe(s.year);
   });
 });
