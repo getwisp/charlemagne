@@ -327,7 +327,7 @@ export const ARCHETYPES: Record<
   raenkeschmiedin: {
     name: 'Ränkeschmiedin',
     description: 'Fokus auf Spionage, bricht Verträge.',
-    weights: { economy: 1.0, land: 1.0, military: 0.8, guard: 1.3, espionage: 1.7, piety: 0.6, aggression: 0.8, speculation: 1.0 },
+    weights: { economy: 1.0, land: 1.0, military: 0.8, guard: 1.0, espionage: 1.7, piety: 0.6, aggression: 0.8, speculation: 1.0 },
     justice: 3,
     ration: 100,
   },
