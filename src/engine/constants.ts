@@ -116,6 +116,16 @@ export const CITY_TAX_BONUS = 0.1;
 export const TAX_LIMITS = { income: 50, sales: 30, tolls: 30 } as const;
 export const DEFAULT_TAXES = { income: 20, sales: 10, tolls: 10 } as const;
 export const INCOME_PER_CITIZEN = 6;
+/**
+ * Sanfte Steuerkurve, Teil 1 – Handel weicht aus: Das Volumen für Mehrwertsteuer und Zölle
+ * schrumpft quadratisch mit dem Steuersatz. Beim Referenzsatz bleibt es unverändert, darunter
+ * belebt sich der Handel, darüber kostet jeder Punkt mehr. Ertragsmaximum bei
+ * 1/√(3·TRADE_EVASION) ≈ 11 %.
+ */
+export const TRADE_EVASION = 27.5;
+export const TRADE_TAX_REFERENCE = 0.1;
+/** Teil 2 – Einkommensteuer: jährliche Abwanderung = Bevölkerung × Faktor × Satz² (ab dem ersten Prozentpunkt). */
+export const INCOME_TAX_EMIGRATION = 0.12;
 export const SALES_PER_CITIZEN = 4;
 export const SALES_PER_MARKET = 15000;
 export const SALES_PER_MILL = 10000;

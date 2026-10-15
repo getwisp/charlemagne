@@ -13,6 +13,7 @@ import {
   HECTARES_PER_BUILDING,
   HECTARES_PER_FARMER,
   INCOME_PER_CITIZEN,
+  INCOME_TAX_EMIGRATION,
   JUSTICE_CRIME,
   JUSTICE_EMIGRATION,
   JUSTICE_PIETY,
@@ -25,6 +26,8 @@ import {
   SALES_PER_MILL,
   TOLLS_PER_HECTARE,
   TOLLS_PER_MARKET,
+  TRADE_EVASION,
+  TRADE_TAX_REFERENCE,
   UNITS,
   YIELD_PER_HECTARE,
 } from './constants';
@@ -120,13 +123,19 @@ export interface TaxBreakdown {
   total: number;
 }
 
+/** Anteil des Handelsvolumens, der bei diesem Satz im Land bleibt (1 beim Referenzsatz). */
+export function tradeRetention(ratePct: number): number {
+  const t = ratePct / 100;
+  return Math.max(0, 1 - TRADE_EVASION * (t * t - TRADE_TAX_REFERENCE * TRADE_TAX_REFERENCE));
+}
+
 export function calculateTaxes(p: Pick<Player, 'population' | 'buildings' | 'land' | 'taxes' | 'justice'>): TaxBreakdown {
   const incomeTax = p.population * INCOME_PER_CITIZEN * (p.taxes.income / 100);
   const salesVolume =
     p.population * SALES_PER_CITIZEN + p.buildings.market * SALES_PER_MARKET + p.buildings.mill * SALES_PER_MILL;
-  const salesTax = salesVolume * (p.taxes.sales / 100);
+  const salesTax = salesVolume * tradeRetention(p.taxes.sales) * (p.taxes.sales / 100);
   const tollVolume = p.buildings.market * TOLLS_PER_MARKET + p.land * TOLLS_PER_HECTARE;
-  const tolls = tollVolume * (p.taxes.tolls / 100);
+  const tolls = tollVolume * tradeRetention(p.taxes.tolls) * (p.taxes.tolls / 100);
   const gross = incomeTax + salesTax + tolls;
   const cityBonus = gross * cityCount(p.buildings) * CITY_TAX_BONUS;
   const crimeLoss = (gross + cityBonus) * JUSTICE_CRIME[p.justice - 1];
@@ -167,12 +176,9 @@ export function calculatePopulation(
   } else {
     immigrants = pop * Math.min(ratio - 1, 1) * 0.12;
   }
-  // Steuerdruck
-  emigrants +=
-    pop *
-    (Math.max(0, p.taxes.income - 25) / 100 * 0.4 +
-      Math.max(0, p.taxes.sales - 15) / 100 * 0.3 +
-      Math.max(0, p.taxes.tolls - 15) / 100 * 0.3);
+  // Steuerdruck: jeder Prozentpunkt Einkommensteuer kostet Einwohner, steigend (keine Freizone).
+  // Mehrwertsteuer und Zölle wirken über das ausweichende Handelsvolumen (tradeRetention).
+  emigrants += pop * INCOME_TAX_EMIGRATION * (p.taxes.income / 100) ** 2;
   // Willkürjustiz
   emigrants += pop * JUSTICE_EMIGRATION[p.justice - 1];
   // Überbevölkerung

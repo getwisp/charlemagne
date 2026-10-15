@@ -11,7 +11,7 @@ export function HelpWindow() {
         <li>Jeder Bürger braucht 2 Scheffel Korn (100 %). Weniger führt zu Hunger und Abwanderung, mehr lockt Zuwanderer.</li>
         <li>Ratten fressen 5–20 % des Lagers – Kornspeicher schützen.</li>
         <li>Jedes Gebäude braucht 1.000 ha freies Land. 5 Märkte + 3 Mühlen ergeben automatisch eine Stadt mit +10 % Steuern.</li>
-        <li>Steuern und Justiz steuern Einnahmen, Kriminalität und Abwanderung. Das Schatzamt zeigt den Haushalt als Vorschau.</li>
+        <li>Steuern kosten ab dem ersten Prozentpunkt: Einkommensteuer treibt Bürger fort, Mehrwertsteuer und Zölle lassen den Handel ausweichen (Ertragsmaximum um 11 %). Das Schatzamt zeigt den Haushalt als Vorschau.</li>
       </ul>
       <h4>Bank</h4>
       <ul>

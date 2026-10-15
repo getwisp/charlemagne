@@ -3,6 +3,8 @@ import {
   actions,
   ActionError,
   ARCHETYPES,
+  calculateTaxes,
+  tradeRetention,
   blockerBoost,
   intrigueTargetScores,
   knightGoal,
@@ -58,6 +60,23 @@ describe('Wirtschaft', () => {
     expect(full.starved).toBe(0);
     expect(generous.immigrants).toBeGreaterThan(full.immigrants);
     expect(generous.populationAfter).toBeGreaterThan(hungry.populationAfter);
+  });
+
+  it('sanfte Steuerkurve: keine Freizone, Handel weicht aus', () => {
+    const s = game();
+    const p = s.players[0];
+    p.buildings.market = 8;
+    // Referenzsatz unverändert, darüber schrumpft das Volumen stetig
+    expect(tradeRetention(10)).toBe(1);
+    expect(tradeRetention(12)).toBeLessThan(1);
+    expect(tradeRetention(15)).toBeLessThan(tradeRetention(12));
+    // Ertragsmaximum um 11 %: 20 % bringen weniger als 10 %
+    const rev = (sales: number) => calculateTaxes({ ...p, taxes: { ...p.taxes, sales } }).salesTax;
+    expect(rev(11)).toBeGreaterThan(rev(10));
+    expect(rev(20)).toBeLessThan(rev(10));
+    // Einkommensteuer: schon unterhalb der alten 25-%-Schwelle kostet jeder Punkt Einwohner
+    const emi = (income: number) => calculateEconomyTurn({ ...p, taxes: { ...p.taxes, income } }, s.market).emigrants;
+    expect(emi(22)).toBeGreaterThan(emi(18));
   });
 
   it('Kornspeicher mindern den Rattenfraß', () => {

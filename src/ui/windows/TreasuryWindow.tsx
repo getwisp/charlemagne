@@ -27,7 +27,10 @@ export function TreasuryWindow() {
             <b style={{ textAlign: 'right' }}>{me.taxes[k]} %</b>
           </div>
         ))}
-        <div className="hint">Hohe Steuern (Einkommen &gt; 25 %, MwSt./Zölle &gt; 15 %) treiben Bürger außer Landes.</div>
+        <div className="hint">
+          Jeder Prozentpunkt kostet, und zwar zunehmend: Einkommensteuer vertreibt Bürger, hohe Mehrwertsteuer und Zölle vertreiben den Handel. Den meisten Ertrag bringen MwSt. und Zölle um 11 %
+          – darüber sinkt er wieder. Die Vorschau unten zeigt die Wirkung sofort.
+        </div>
       </GroupBox>
 
       <GroupBox label={`Justiz: ${JUSTICE_NAMES[me.justice - 1]}`}>
