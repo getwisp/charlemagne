@@ -129,6 +129,7 @@ export function planAiTurn(state: GameState, playerId: string): GameState {
 
   setPolicies(s, p, w);
   survival(s, p, arch.ration);
+  if (RAENKE_DETERRENCE && p.archetype === 'raenkeschmiedin' && s.year > s.startYear) deterrence(s, p);
   speculation(s, p, w);
   // Die Ränkeschmiedin bezahlt ihre Agenten, bevor der Rest in Titel fließt.
   if (p.archetype === 'raenkeschmiedin' && s.year > s.startYear) leaderIntrigue(s, p, w);
@@ -569,6 +570,28 @@ function pickIntrigueTarget(s: GameState, p: Player): Player | null {
  */
 const SABOTAGE_ONLY_NEAR_CROWN = false;
 
+/** Ränkeschmiedin späht ein Ziel aus, bevor sie zuschlägt (sonst: Schätzung aus öffentlichen Daten). */
+const SPY_BEFORE_STRIKE = true;
+
+/**
+ * Abschreckung: Die Ränkeschmiedin hält ihr öffentlich sichtbares Heer nahe an der Stärke des
+ * mächtigsten Rivalen, bevor sie investiert – sonst ist sie das bequemste Ziel für Feldzüge.
+ */
+const RAENKE_DETERRENCE = false;
+const DETERRENCE_RATIO = 0.9;
+
+function deterrence(s: GameState, p: Player): void {
+  const strongest = Math.max(0, ...s.players.filter((o) => o.id !== p.id).map((o) => publicArmyEstimate(o)));
+  const target = strongest * DETERRENCE_RATIO;
+  const mine = publicArmyEstimate(p);
+  if (mine >= target) return;
+  // Söldner zählen 1 Punkt (×Palastbonus) in der öffentlichen Schätzung.
+  const bonus = Math.max(1, mine > 0 ? mine / Math.max(1, armySize(p.military)) : 1);
+  const n = Math.min(Math.ceil((target - mine) / bonus), Math.floor((budget(p) * 0.6) / UNITS.mercenaries.cost));
+  if (n > 0) attempt(() => mut.recruit(s, p.id, 'mercenaries', n));
+  if (publicArmyEstimate(p) < target) attempt(() => mut.setEntrenched(s, p.id, true));
+}
+
 /**
  * Ränkeschmiedin: Gummiband gegen den Führenden. 90 % ihrer Intrigen treffen den
  * Punktbesten; Raub bevorzugt, weil die Beute als Blutgeld ihr eigenes Wachstum finanziert.
@@ -598,7 +621,7 @@ function leaderIntrigue(s: GameState, p: Player, w: Weights): void {
   if (exposureRisk > 0.8 && !nearCrown) return;
 
   let mission: CovertMission;
-  if (!fresh && available.includes('spy')) mission = 'spy'; // erst auskundschaften, dann zuschlagen
+  if (!fresh && SPY_BEFORE_STRIKE && available.includes('spy')) mission = 'spy'; // erst auskundschaften, dann zuschlagen
   else {
     mission = available.includes('rob') ? 'rob' : 'spy';
     if (available.includes('assassinate') && nearCrown && chance(s, 0.5)) mission = 'assassinate';
