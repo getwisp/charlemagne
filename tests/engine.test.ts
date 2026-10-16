@@ -490,6 +490,15 @@ describe('Titel', () => {
 });
 
 describe('Reichstag', () => {
+  it('Skandale verjähren alle 10 Jahre', () => {
+    let s = newGame({ seed: 3, players: [{ name: 'A', isAI: false }] });
+    s.players[0].scandals = 2;
+    for (let i = 0; i < 9; i++) s = resolveYear(s);
+    expect(s.players[0].scandals).toBe(2);
+    s = resolveYear(s);
+    expect(s.players[0].scandals).toBe(1);
+  });
+
   function electionGame(): GameState {
     const s = game(3);
     const k = s.players[0];

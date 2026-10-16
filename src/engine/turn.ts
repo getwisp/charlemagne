@@ -3,7 +3,7 @@
 //   (Dashboard-Phase: Spieler geben Befehle, KI plant ihren Zug)
 //   resolveYear → Intrigen, Kriege, Reichstag, Wirtschaft, Bank, Titel → beginYear
 
-import { ARCHETYPES, DEFAULT_TAXES, GRUDGE, PLAYER_COLORS, RAT_MAX, RAT_MIN, START_VALUES, TITLES } from './constants';
+import { ARCHETYPES, DEFAULT_TAXES, GRUDGE, PLAYER_COLORS, RAT_MAX, RAT_MIN, SCANDAL_DECAY_YEARS, START_VALUES, TITLES } from './constants';
 import { calculateEconomyTurn, expectedHarvest, grainNeed, score } from './economy';
 import { processBanking, resolveInsolvency } from './bank';
 import { resolveCovert } from './covert';
@@ -219,8 +219,9 @@ export function resolveYear(state: GameState): GameState {
     if (p.sickbed > 0) p.sickbed -= 1;
   }
 
-  // 6. Groll verblasst, Neid auf den Führenden wächst (Blue-Shell-Effekt)
+  // 6. Groll verblasst, Neid auf den Führenden wächst (Blue-Shell-Effekt); Skandale verjähren
   updateGrudges(s);
+  for (const p of s.players) ageScandals(s, p);
 
   // 7. Titel
   checkTitles(s);
@@ -248,6 +249,20 @@ export function resolveYear(state: GameState): GameState {
 
 export function rankPlayers(s: GameState): Player[] {
   return [...s.players].sort((a, b) => score(b) - score(a));
+}
+
+/** Alle SCANDAL_DECAY_YEARS Jahre gerät ein Skandal in Vergessenheit. */
+function ageScandals(s: GameState, p: Player): void {
+  if (p.scandals <= 0) {
+    p.scandalClock = 0;
+    return;
+  }
+  p.scandalClock = (p.scandalClock ?? 0) + 1;
+  if (p.scandalClock >= SCANDAL_DECAY_YEARS) {
+    p.scandals -= 1;
+    p.scandalClock = 0;
+    tell(s, p.id, 'Gras über die Sache', `Ein alter Skandal ist in Vergessenheit geraten. Verbleibende Skandale: ${p.scandals}.`, 'good');
+  }
 }
 
 function updateGrudges(s: GameState): void {

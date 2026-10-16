@@ -10,6 +10,7 @@ import {
   TITLES,
   TREATIES,
   TREATY_YEARS,
+  SCANDAL_DECAY_YEARS,
   ALLIANCE_SHARE,
   TRADE_TREATY_BONUS,
   TRADE_TREATY_MAX,
@@ -69,6 +70,7 @@ function TitleTab() {
       </div>
       <div>
         <b>{me.regentName}</b>, {TITLES[me.title]} – {me.name}. Frömmigkeit: {piety(me)} · Skandale: {me.scandals}
+        {me.scandals > 0 && <span className="muted"> (nächster verjährt in {SCANDAL_DECAY_YEARS - (me.scandalClock ?? 0)} Jahren)</span>}
       </div>
       {reqs.length > 0 ? (
         <GroupBox label={`Voraussetzungen für ${TITLES[me.title + 1]} (alle gleichzeitig)`}>

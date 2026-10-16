@@ -154,6 +154,8 @@ export interface Player {
   grudges: Record<string, number>;
   /** Skandale (gescheiterte Intrigen, Schuldturm, Hexenprozesse …) */
   scandals: number;
+  /** Jahre seit der letzten Verjährung eines Skandals (fehlt in älteren Spielständen). */
+  scandalClock?: number;
 
   /** Land zu Beginn des Jahres – für Degradierung bei >50 % Landverlust. */
   landAtYearStart: number;

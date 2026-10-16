@@ -776,7 +776,8 @@ function leaderIntrigue(s: GameState, p: Player, w: Weights): void {
 function electionPolitics(s: GameState, p: Player): void {
   const e = s.election;
   if (!e || !e.candidates.includes(p.id)) return;
-  const share = p.archetype === 'kirchenfuerst' ? 0.8 : 0.55;
+  // Kirchenfürst und Kriegstreiber setzen im Wahlkampf alles auf eine Karte.
+  const share = p.archetype === 'kirchenfuerst' || p.archetype === 'kriegstreiber' ? 0.8 : 0.55;
   const pot = Math.floor((p.gold + p.savings * 0.5) * share);
   if (p.savings > 0) attempt(() => mut.withdraw(s, p.id, Math.floor(p.savings * 0.5)));
   const seats = e.seats.map((seat, i) => ({ seat, i })).filter(({ seat }) => !(seat.kind === 'player' && seat.playerId === p.id));
