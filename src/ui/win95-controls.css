@@ -54,7 +54,8 @@
    so springt der Text nicht, wenn der Inhalt wächst. */
 .scroll-area {
   overflow: auto;
-  padding: 6px 10px 6px 6px;
+  /* Wenig Luft wie bei Win98-Textfeldern – gerade genug für die Lesbarkeit */
+  padding: 4px 4px 4px 6px;
   scrollbar-gutter: stable;
 }
 
