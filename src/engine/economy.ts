@@ -32,6 +32,8 @@ import {
   SALES_PER_MILL,
   TOLLS_PER_HECTARE,
   TOLLS_PER_MARKET,
+  TRADE_TREATY_BONUS,
+  TRADE_TREATY_MAX,
   TRADE_EVASION,
   TRADE_TAX_REFERENCE,
   UNITS,
@@ -125,6 +127,8 @@ export interface TaxBreakdown {
   salesTax: number;
   tolls: number;
   cityBonus: number;
+  /** Mehreinnahmen durch Handelsabkommen (in salesTax und tolls bereits enthalten) */
+  tradeBonus: number;
   crimeLoss: number;
   total: number;
 }
@@ -156,13 +160,19 @@ export function cityBonusFactor(b: Buildings): number {
   return f;
 }
 
-export function calculateTaxes(p: Pick<Player, 'population' | 'buildings' | 'land' | 'taxes' | 'justice'>): TaxBreakdown {
+export function calculateTaxes(
+  p: Pick<Player, 'population' | 'buildings' | 'land' | 'taxes' | 'justice'>,
+  tradeAgreements = 0,
+): TaxBreakdown {
   const incomeTax = p.population * INCOME_PER_CITIZEN * (p.taxes.income / 100);
+  // Handelsabkommen beleben Märkte und Zollstationen
+  const tradeFactor = 1 + TRADE_TREATY_BONUS * Math.min(TRADE_TREATY_MAX, tradeAgreements);
   const salesVolume =
-    p.population * SALES_PER_CITIZEN + p.buildings.market * SALES_PER_MARKET + p.buildings.mill * SALES_PER_MILL;
+    (p.population * SALES_PER_CITIZEN + p.buildings.market * SALES_PER_MARKET + p.buildings.mill * SALES_PER_MILL) * tradeFactor;
   const salesTax = salesVolume * tradeRetention(p.taxes.sales) * (p.taxes.sales / 100);
-  const tollVolume = p.buildings.market * TOLLS_PER_MARKET + p.land * TOLLS_PER_HECTARE;
+  const tollVolume = (p.buildings.market * TOLLS_PER_MARKET + p.land * TOLLS_PER_HECTARE) * tradeFactor;
   const tolls = tollVolume * tradeRetention(p.taxes.tolls) * (p.taxes.tolls / 100);
+  const tradeBonus = (salesTax + tolls) * (1 - 1 / tradeFactor);
   const gross = incomeTax + salesTax + tolls;
   const cityBonus = gross * cityBonusFactor(p.buildings);
   const crimeLoss = (gross + cityBonus) * JUSTICE_CRIME[p.justice - 1];
@@ -171,6 +181,7 @@ export function calculateTaxes(p: Pick<Player, 'population' | 'buildings' | 'lan
     salesTax: Math.round(salesTax),
     tolls: Math.round(tolls),
     cityBonus: Math.round(cityBonus),
+    tradeBonus: Math.round(tradeBonus),
     crimeLoss: Math.round(crimeLoss),
     total: Math.round(gross + cityBonus - crimeLoss),
   };
@@ -239,6 +250,8 @@ export interface EconomyOptions {
   ratRate?: number;
   /** Erzwingt eine andere Kornausgabe (z. B. 0 im Schuldturm). */
   rationOverride?: number;
+  /** Anzahl aktiver Handelsabkommen */
+  tradeAgreements?: number;
 }
 
 /**
@@ -251,7 +264,7 @@ export function calculateEconomyTurn(p: Player, market: MarketState, opts: Econo
   const grainDistributed = Math.round(Math.min(p.grain, (need * ration) / 100));
   const pop = calculatePopulation(p, grainDistributed);
 
-  const taxes = calculateTaxes(p);
+  const taxes = calculateTaxes(p, opts.tradeAgreements ?? 0);
   const savingsInterest = Math.round((p.savings * savingsRate(market)) / 100);
   const mUpkeep = militaryUpkeep(p);
   const bUpkeep = buildingUpkeep(p.buildings);

@@ -1,4 +1,4 @@
-import { actions, calculateEconomyTurn, grainBuyCost, granaryProtection, grainNeed, RAT_MAX, RAT_MIN } from '../../engine';
+import { actions, previewEconomy, grainBuyCost, granaryProtection, grainNeed, RAT_MAX, RAT_MIN } from '../../engine';
 import { GroupBox, n } from '../components/controls';
 import { useGame } from '../context';
 import { PixelIcon } from '../icons';
@@ -6,7 +6,7 @@ import { PixelIcon } from '../icons';
 export function GranaryWindow() {
   const { state, me, act, canAct } = useGame();
   const need = grainNeed(me);
-  const preview = calculateEconomyTurn(me, state.market);
+  const preview = previewEconomy(state, me);
   const affordable = need > 0 ? Math.floor((me.grain / need) * 100) : 100;
   const protection = granaryProtection(me.buildings);
   const set = (v: number) => act((s) => actions.setRation(s, me.id, v));

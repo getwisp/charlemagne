@@ -7,6 +7,7 @@ import { ARCHETYPES, DEFAULT_TAXES, GRUDGE, PLAYER_COLORS, RAT_MAX, RAT_MIN, STA
 import { calculateEconomyTurn, expectedHarvest, grainNeed, score } from './economy';
 import { processBanking, resolveInsolvency } from './bank';
 import { resolveCovert } from './covert';
+import { expireTreaties, processOffers, tradeAgreementCount } from './diplomacy';
 import { drawEvent, freshEventBag } from './events';
 import { maybeCallElection, resolveElection } from './election';
 import { processTraining, resolveAttack } from './military';
@@ -96,6 +97,8 @@ export function newGame(opts: NewGameOptions): GameState {
     messages: {},
     chronicle: [],
     election: null,
+    treaties: [],
+    offers: [],
     lastElection: null,
     winnerId: null,
     endReason: null,
@@ -173,6 +176,7 @@ export function resolveYear(state: GameState): GameState {
     const report = calculateEconomyTurn(p, s.market, {
       ratRate: randFloat(s, RAT_MIN, RAT_MAX),
       rationOverride: p.debtorPrison > 0 ? 0 : undefined,
+      tradeAgreements: tradeAgreementCount(s, p.id),
     });
     p.grain = Math.max(0, p.grain - report.grainDistributed - report.ratLoss);
     p.population = Math.max(0, p.population + report.populationAfter - p.population);
@@ -203,6 +207,10 @@ export function resolveYear(state: GameState): GameState {
     resolveInsolvency(s, p);
     processTraining(p);
   }
+
+  // 4b. Diplomatie: Angebote zustellen bzw. verfallen lassen, ausgelaufene Verträge beenden
+  processOffers(s);
+  expireTreaties(s);
 
   // 5. Status-Zähler (Schuldturm/Krankenbett) – nur für jene, die dieses Jahr ausgesetzt haben
   for (const id of serving) {

@@ -12,6 +12,7 @@ import {
   ROB_TAX_SHARE,
   TITLES,
 } from './constants';
+import { breakTreaties } from './diplomacy';
 import { calculateTaxes, cityCount, totalDebt } from './economy';
 import { chance, randFloat } from './rng';
 import type { CovertAction, CovertMission, GameState, Player } from './types';
@@ -86,6 +87,8 @@ export function resolveCovert(s: GameState, a: CovertAction): boolean {
         'error',
       );
       chronicle(s, `Skandal: Ein Spion von ${from.name} wurde bei ${target.name} gefasst.`);
+      // Raub, Sabotage und Attentat zerreißen bestehende Verträge; bloße Spionage nicht.
+      if (a.mission !== 'spy') breakTreaties(s, from, target, 'intrigue');
     } else {
       tell(s, target.id, 'Spion gefasst', 'Eure Garde hat einen fremden Agenten gefasst. Er starb, ohne seinen Auftraggeber zu verraten.', 'info');
       tell(s, from.id, 'Mission gescheitert', `Euer Agent (${mission} gegen ${target.name}) wurde gefasst, schwieg aber bis zuletzt.`, 'warning');

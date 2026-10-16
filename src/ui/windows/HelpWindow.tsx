@@ -27,6 +27,12 @@ export function HelpWindow() {
       </ul>
       <h4>Taverne</h4>
       <p>Ausspähen (ab Baron), Raub (Graf), Sabotage (Fürst), Attentat (Herzog). Gefasste Spione können unter der Folter reden – das Opfer erhält einen Casus Belli.</p>
+      <h4>Diplomatie</h4>
+      <ul>
+        <li>Im Thronsaal (Diplomatie) entsendet Ihr Gesandte, auf Wunsch mit Mitgift. Der Empfänger antwortet im nächsten Jahr; lehnt er ab oder schweigt er, kehrt die Mitgift zurück.</li>
+        <li>Nichtangriffspakt: kein Krieg. Handelsabkommen: +5 % Mehrwertsteuer und Zölle für beide (höchstens drei zählen). Verteidigungsbündnis: enthält den Pakt, und bei einem Angriff kämpfen 25 % des Partnerheeres mit.</li>
+        <li>Verträge laufen fest 5 Jahre. Wer trotzdem angreift, bricht sein Wort: Skandal, Casus Belli für das Opfer, Groll aller Herrscher. Fliegt ein Dieb, Saboteur oder Attentäter beim Partner auf, platzen die Verträge.</li>
+      </ul>
       <h4>Titel &amp; Kaiserwahl</h4>
       <p>
         Edler → Freiherr → Baron → Graf → Fürst → Herzog → Kurfürst → König → Kaiser. Alle Voraussetzungen müssen gleichzeitig erfüllt sein, max. eine Beförderung pro Jahr. Ist ein König

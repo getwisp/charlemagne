@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import {
   actions,
-  calculateEconomyTurn,
+  previewEconomy,
   cityCount,
   fiefLand,
   freeLand,
@@ -99,7 +99,7 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const unread = state.messages[me.id] ?? [];
-  const preview = useMemo(() => calculateEconomyTurn(me, state.market), [me, state.market]);
+  const preview = useMemo(() => previewEconomy(state, me), [me, state]);
 
   // Fensterlayout bleibt pro Spieler erhalten (Jahreswechsel, Hot-Seat, Neuladen).
   useEffect(() => {

@@ -1,4 +1,5 @@
 import {
+  ALLIANCE_SHARE,
   ATTACK_STRENGTH,
   CASUS_BELLI_MORALE,
   DEFENSE_STRENGTH,
@@ -13,6 +14,7 @@ import {
   TRAINING_MAX,
   TRAINING_MIN,
 } from './constants';
+import { alliesOf, breakTreaties, hasPeace } from './diplomacy';
 import { builtLand, fiefLandRequired } from './economy';
 import { randFloat } from './rng';
 import type { AttackAction, BuildingType, GameState, Military, Player } from './types';
@@ -108,6 +110,31 @@ export function loseLand(p: Player, ha: number): string[] {
   return destroyed;
 }
 
+export interface AllyContingent {
+  ally: Player;
+  units: Record<ArmyUnit, number>;
+  power: number;
+}
+
+/**
+ * Bündnishilfe: Jeder Verbündete des Verteidigers (außer dem Angreifer selbst)
+ * schickt ALLIANCE_SHARE seines Heeres – soweit es nicht selbst ausgerückt ist.
+ * Die Hilfstruppen kämpfen auf dem Boden des Verteidigers (dessen Defensivbonus).
+ */
+export function allyContingents(s: GameState, def: Player, attackerId: string, awayFractions: Record<string, number> = {}): AllyContingent[] {
+  const result: AllyContingent[] = [];
+  for (const id of alliesOf(s, def.id)) {
+    if (id === attackerId) continue;
+    const ally = getPlayer(s, id);
+    if (ally.debtorPrison > 0) continue;
+    const share = Math.min(ALLIANCE_SHARE, Math.max(0, 1 - (awayFractions[id] ?? 0)));
+    const units = unitsOf(ally.military, share);
+    const power = rawPower(units, DEFENSE_STRENGTH) * morale(ally) * ally.military.training * defenseBonus(def);
+    if (power > 0) result.push({ ally, units, power });
+  }
+  return result;
+}
+
 export interface BattleResult {
   attackerWon: boolean;
   attackPower: number;
@@ -123,10 +150,14 @@ export function resolveAttack(s: GameState, a: AttackAction, awayFractions: Reco
   if (rawPower(sent, ATTACK_STRENGTH) <= 0) return null;
 
   const hasCb = att.casusBelli.includes(def.id);
+  // Wer trotz Nichtangriffspakt oder Bündnis angreift, bricht den Vertrag – vor der Schlacht.
+  if (hasPeace(s, att.id, def.id)) breakTreaties(s, att, def, 'attack');
+  const allies = def.debtorPrison > 0 ? [] : allyContingents(s, def, att.id, awayFractions);
+  const allyPow = allies.reduce((sum, c) => sum + c.power, 0);
   const aPow = attackPower(att, a.fraction, def.id) * randFloat(s, 0.85, 1.15);
   const away = awayFractions[def.id] ?? 0;
   const homeUnits = unitsOf(def.military, 1 - away);
-  const dPow = defensePower(def, away) * randFloat(s, 0.85, 1.15);
+  const dPow = (defensePower(def, away) + allyPow) * randFloat(s, 0.85, 1.15);
   const attackerWon = aPow > dPow;
   const ratio = attackerWon ? aPow / Math.max(1, dPow) : dPow / Math.max(1, aPow);
   const severity = clamp((ratio - 1) / 1.5, 0, 1);
@@ -137,8 +168,23 @@ export function resolveAttack(s: GameState, a: AttackAction, awayFractions: Reco
   const loser = attackerWon ? def : att;
   const winnerUnits = attackerWon ? sent : homeUnits;
   const loserUnits = attackerWon ? homeUnits : sent;
-  const winnerLost = applyCasualties(winner.military, winnerUnits, 0.1 + 0.1 * (1 - severity));
-  const loserLost = applyCasualties(loser.military, loserUnits, 0.3 + 0.2 * severity);
+  const winnerRate = 0.1 + 0.1 * (1 - severity);
+  const loserRate = 0.3 + 0.2 * severity;
+  const winnerLost = applyCasualties(winner.military, winnerUnits, winnerRate);
+  const loserLost = applyCasualties(loser.military, loserUnits, loserRate);
+  // Hilfstruppen teilen das Schicksal der Verteidiger: gleiche Verlustquote.
+  for (const c of allies) {
+    const lost = applyCasualties(c.ally.military, c.units, attackerWon ? loserRate : winnerRate);
+    tell(
+      s,
+      c.ally.id,
+      attackerWon ? 'Bündnisfall: Niederlage' : 'Bündnisfall: Sieg',
+      `Eure Hilfstruppen standen ${def.name} gegen ${att.name} bei – ${attackerWon ? 'vergeblich' : 'mit Erfolg'}. Eure Verluste: ${lossText(lost)}.`,
+      attackerWon ? 'warning' : 'good',
+    );
+  }
+  const allyText = allies.length ? ` An Eurer Seite kämpften Truppen von ${allies.map((c) => c.ally.name).join(', ')}.` : '';
+  const allyTextAtt = allies.length ? ` ${allies.map((c) => c.ally.name).join(', ')} eilte${allies.length > 1 ? 'n' : ''} dem Verteidiger zu Hilfe.` : '';
 
   // Verlierer büßt Land und Bargeld ein.
   const land = Math.max(0, Math.min(Math.round(loser.land * landPct), loser.land - MIN_LAND_AFTER_BATTLE));
@@ -157,33 +203,33 @@ export function resolveAttack(s: GameState, a: AttackAction, awayFractions: Reco
       s,
       att.id,
       'Sieg auf dem Schlachtfeld!',
-      `Euer Heer hat ${def.name} geschlagen${hasCb ? ' (gerechter Rachefeldzug)' : ''}. Beute: ${fmt(land)} ha Land und ${fmt(gold)} Taler. Eure Verluste: ${lossText(winnerLost)}.`,
+      `Euer Heer hat ${def.name} geschlagen${hasCb ? ' (gerechter Rachefeldzug)' : ''}. Beute: ${fmt(land)} ha Land und ${fmt(gold)} Taler. Eure Verluste: ${lossText(winnerLost)}.${allyTextAtt}`,
       'good',
     );
     tell(
       s,
       def.id,
       'Überfall!',
-      `${att.name} hat Euer Land überfallen und gesiegt. Ihr verliert ${fmt(land)} ha Land und ${fmt(gold)} Taler.${destroyedText} Verluste: ${lossText(loserLost)}.`,
+      `${att.name} hat Euer Land überfallen und gesiegt. Ihr verliert ${fmt(land)} ha Land und ${fmt(gold)} Taler.${destroyedText} Verluste: ${lossText(loserLost)}.${allyText}`,
       'error',
     );
-    chronicle(s, `${att.name} besiegt ${def.name} und erobert ${fmt(land)} ha.`);
+    chronicle(s, `${att.name} besiegt ${def.name} und erobert ${fmt(land)} ha.${allies.length ? ' (Bündnistruppen kämpften mit.)' : ''}`);
   } else {
     tell(
       s,
       att.id,
       'Niederlage!',
-      `Euer Angriff auf ${def.name} ist gescheitert. Ihr verliert ${fmt(land)} ha Land und ${fmt(gold)} Taler Reparationen.${destroyedText} Verluste: ${lossText(loserLost)}.`,
+      `Euer Angriff auf ${def.name} ist gescheitert. Ihr verliert ${fmt(land)} ha Land und ${fmt(gold)} Taler Reparationen.${destroyedText} Verluste: ${lossText(loserLost)}.${allyTextAtt}`,
       'error',
     );
     tell(
       s,
       def.id,
       'Angriff abgewehrt!',
-      `${att.name} hat Euch angegriffen, doch Eure Truppen haben gesiegt. Ihr erhaltet ${fmt(land)} ha Land und ${fmt(gold)} Taler Reparationen. Verluste: ${lossText(winnerLost)}.`,
+      `${att.name} hat Euch angegriffen, doch Eure Truppen haben gesiegt. Ihr erhaltet ${fmt(land)} ha Land und ${fmt(gold)} Taler Reparationen. Verluste: ${lossText(winnerLost)}.${allyText}`,
       'good',
     );
-    chronicle(s, `${def.name} schlägt den Angriff von ${att.name} zurück.`);
+    chronicle(s, `${def.name} schlägt den Angriff von ${att.name} zurück.${allies.length ? ' (Bündnistruppen kämpften mit.)' : ''}`);
   }
   return { attackerWon, attackPower: aPow, defensePower: dPow, land, gold };
 }

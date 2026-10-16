@@ -20,7 +20,7 @@ import {
   YIELD_PER_HECTARE,
   type TitleRequirements,
 } from './constants';
-import { COVERT_BASE_DEFENSE, COVERT_DEFENSE_PER_GUARD, JUSTICE_DEFENSE, ROB_CASH_SHARE, ROB_TAX_SHARE } from './constants';
+import { ALLIANCE_SHARE, COVERT_BASE_DEFENSE, COVERT_DEFENSE_PER_GUARD, JUSTICE_DEFENSE, ROB_CASH_SHARE, ROB_TAX_SHARE } from './constants';
 import {
   buildingUpkeep,
   calculateEconomyTurn,
@@ -32,11 +32,12 @@ import {
   militaryUpkeep,
   score,
 } from './economy';
+import { hasPeace, offerBlocker, treatiesBetween } from './diplomacy';
 import { armySize, attackPower, defenseBonus, defensePower, maneuverCost, morale } from './military';
 import { publicArmyEstimate, publicInfo } from './intel';
 import { chance, random } from './rng';
 import { nextTitleRequirements, type RequirementStatus } from './titles';
-import type { Archetype, BuildingType, CovertMission, GameState, Player, SpyIntel } from './types';
+import type { Archetype, BuildingType, CovertMission, GameState, Player, SpyIntel, TreatyType } from './types';
 import { clone, getPlayer } from './util';
 
 type Weights = (typeof ARCHETYPES)[Archetype]['weights'];
@@ -128,6 +129,7 @@ export function planAiTurn(state: GameState, playerId: string): GameState {
   p.loot = 0;
 
   setPolicies(s, p, w);
+  diplomacy(s, p);
   survival(s, p, arch.ration);
   speculation(s, p, w);
   // Die Ränkeschmiedin bezahlt ihre Agenten, bevor der Rest in Titel fließt.
@@ -141,6 +143,87 @@ export function planAiTurn(state: GameState, playerId: string): GameState {
 
   attempt(() => mut.endTurn(s, p.id));
   return s;
+}
+
+// ------------------------------------------------------------ Diplomatie
+function isTreatyPartner(s: GameState, a: string, b: string): boolean {
+  return treatiesBetween(s, a, b).length > 0;
+}
+
+/** Wer deutlich vorne liegt, bekommt keine Hilfe (Blue-Shell) – Handel und Bündnis lehnt man ab. */
+function runawayLeader(s: GameState, p: Player): Player | null {
+  const leader = [...s.players].sort((a, b) => score(b) - score(a))[0];
+  return leader && leader.id !== p.id && score(leader) > score(p) * 1.2 ? leader : null;
+}
+
+/** Mitgift, ab der eine KI auch ungeliebte Verträge unterschreibt (wächst mit ihrem Rang). */
+export function aiTributeDemand(p: Player): number {
+  return Math.round((1000 + score(p) * 0.02) / 100) * 100;
+}
+
+/** Würde die KI dieses Angebot annehmen? Öffentlich: auch für die Vorschau im Thronsaal nutzbar. */
+export function aiAcceptsOffer(s: GameState, p: Player, from: Player, type: TreatyType, gold: number): boolean {
+  const hostile = (p.grudges[from.id] ?? 0) >= 40 || p.casusBelli.includes(from.id);
+  if (hostile) return false;
+  const runaway = runawayLeader(s, p)?.id === from.id;
+  const sweetener = gold >= aiTributeDemand(p);
+  switch (type) {
+    case 'nap':
+      // Der Kriegstreiber bindet sich ungern – außer gegen gutes Geld oder einen übermächtigen Nachbarn.
+      if (p.archetype === 'kriegstreiber') return sweetener || publicArmyEstimate(from) > attackPower(p, 1) * 1.3;
+      return true;
+    case 'trade':
+      return !runaway || sweetener;
+    case 'alliance':
+      if (runaway) return false;
+      if (p.archetype === 'kriegstreiber') return sweetener;
+      return true;
+  }
+}
+
+/** Beantwortet Angebote und schlägt selbst Verträge vor (höchstens einen je Jahr). */
+function diplomacy(s: GameState, p: Player): void {
+  for (const o of (s.offers ?? []).filter((x) => x.to === p.id)) {
+    const from = me(s, o.from);
+    if (aiAcceptsOffer(s, p, from, o.type, o.gold)) attempt(() => mut.acceptOffer(s, p.id, o.id));
+    else attempt(() => mut.declineOffer(s, p.id, o.id));
+  }
+  if (s.year === s.startYear) return;
+
+  const rivals = s.players.filter((o) => o.id !== p.id && o.debtorPrison === 0);
+  const friendly = rivals.filter((o) => (p.grudges[o.id] ?? 0) < 40 && !p.casusBelli.includes(o.id));
+  const leader = runawayLeader(s, p);
+  const canOffer = (o: Player, t: TreatyType) => offerBlocker(s, p.id, o.id, t) === null;
+  const offer = (o: Player | undefined, t: TreatyType) => !!o && attempt(() => mut.offerTreaty(s, p.id, o.id, t, 0));
+
+  // Koalition gegen den Enteilten: Bündnis mit dem stärksten anderen Verfolger.
+  if (leader && p.archetype !== 'kriegstreiber' && chance(s, 0.3)) {
+    const partner = friendly
+      .filter((o) => o.id !== leader.id && canOffer(o, 'alliance'))
+      .sort((a, b) => publicArmyEstimate(b) - publicArmyEstimate(a))[0];
+    if (offer(partner, 'alliance')) return;
+  }
+  // Frieden mit dem gefährlichsten Nachbarn – nur wer nicht selbst erobern will.
+  const napChance = p.archetype === 'kirchenfuerst' || p.archetype === 'raenkeschmiedin' ? 0.4 : p.archetype === 'pfeffersack' ? 0.25 : 0;
+  if (napChance > 0 && chance(s, napChance)) {
+    const strongest = friendly.filter((o) => canOffer(o, 'nap')).sort((a, b) => publicArmyEstimate(b) - publicArmyEstimate(a))[0];
+    if (strongest && publicArmyEstimate(strongest) > defensePower(p) * 0.5) {
+      // Frieden mit einem Kriegstreiber gibt es nur gegen Tribut – wenn die Kasse ihn hergibt.
+      const tribute = strongest.archetype === 'kriegstreiber' ? aiTributeDemand(strongest) : 0;
+      if (tribute <= budget(p) * 0.3) {
+        fund(s, p, tribute);
+        if (attempt(() => mut.offerTreaty(s, p.id, strongest.id, 'nap', tribute))) return;
+      }
+    }
+  }
+  // Handel: der Pfeffersack sucht ihn aktiv, die anderen gelegentlich.
+  const tradeChance = p.archetype === 'pfeffersack' ? 0.5 : 0.15;
+  if (chance(s, tradeChance)) {
+    const partner = friendly
+      .filter((o) => o.id !== leader?.id && canOffer(o, 'trade'))
+      .sort((a, b) => publicInfo(b).population - publicInfo(a).population)[0];
+    offer(partner, 'trade');
+  }
 }
 
 // ------------------------------------------------------------ Politik
@@ -473,7 +556,9 @@ function militaryAndIntrigue(s: GameState, p: Player, w: Weights): void {
       // Wer einen Casus Belli gegen uns hat, wurde uns vom Herold genannt – mit ihm ist zu rechnen.
       .map((o) => {
         const hostile = (p.grudges[o.id] ?? 0) >= 40 || o.casusBelli.includes(p.id);
-        return publicArmyEstimate(o) * (hostile ? 0.85 : 0.45) * (hostile ? 1 : 0.6 + 0.4 * w.military);
+        // Ein Vertragsbruch kostet den Angreifer Skandal und Ansehen – Partner sind weniger bedrohlich.
+        const peace = hasPeace(s, p.id, o.id) ? 0.4 : 1;
+        return publicArmyEstimate(o) * (hostile ? 0.85 : 0.45) * (hostile ? 1 : 0.6 + 0.4 * w.military) * peace;
       }),
   );
   const myDefense = defensePower(p);
@@ -495,9 +580,19 @@ function militaryAndIntrigue(s: GameState, p: Player, w: Weights): void {
 
   // Angriff: Groll multipliziert die Wahrscheinlichkeit
   for (const { target, value } of enemies.slice(0, 2)) {
-    const pAttack = Math.min(0.8, 0.08 * w.aggression * (1 + value / 40));
+    let pAttack = Math.min(0.8, 0.08 * w.aggression * (1 + value / 40));
+    if (hasPeace(s, p.id, target.id)) {
+      // Nur der Kriegstreiber bricht sein Wort – und auch er nur aus echtem Groll.
+      if (p.archetype !== 'kriegstreiber' || value < 40) continue;
+      pAttack *= 0.5;
+    }
     if (!chance(s, pAttack)) continue;
-    const estimate = publicArmyEstimate(target);
+    // Bündnishilfe einrechnen: jeder Verbündete schickt einen Teil seines Heeres.
+    const estimate =
+      publicArmyEstimate(target) +
+      s.players
+        .filter((o) => o.id !== p.id && o.id !== target.id && treatiesBetween(s, o.id, target.id).some((t) => t.type === 'alliance'))
+        .reduce((sum, o) => sum + publicArmyEstimate(o) * ALLIANCE_SHARE, 0);
     const fraction = 0.7;
     const myPower = attackPower(p, fraction, target.id);
     if (myPower > estimate * (1.3 / w.aggression) + 5) {
@@ -510,7 +605,9 @@ function militaryAndIntrigue(s: GameState, p: Player, w: Weights): void {
     (k) => p.title >= COVERT[k].minTitle,
   );
   if (missions.length === 0) return;
-  const top = enemies[0];
+  // Gegen Vertragspartner wird nicht intrigiert.
+  const top = enemies.find((e) => !isTreatyPartner(s, p.id, e.target.id));
+  if (!top) return;
   const pCovert = Math.min(0.9, 0.12 * w.espionage * (1 + top.value / 50));
   if (!chance(s, pCovert)) return;
   const gold = Math.floor(budget(p) * 0.15 * w.espionage);
@@ -576,6 +673,8 @@ function leaderIntrigue(s: GameState, p: Player, w: Weights): void {
   if (available.length === 0) return;
 
   const ahead = score(target) / Math.max(1, score(p));
+  // Vertragspartner bespitzelt sie höchstens – es sei denn, er enteilt ihr deutlich.
+  if (isTreatyPartner(s, p.id, target.id) && ahead < 1.3) return;
   // Je weiter der Führende enteilt, desto häufiger und härter wird intrigiert.
   const pCovert = Math.min(0.95, 0.35 * w.espionage * Math.max(0.5, ahead));
   if (!chance(s, pCovert)) return;

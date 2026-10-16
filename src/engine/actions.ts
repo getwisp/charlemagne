@@ -20,6 +20,8 @@ import {
   T,
   TAX_LIMITS,
   TITLES,
+  TREATIES,
+  TREATY_YEARS,
   UNITS,
 } from './constants';
 import { assetValue, creditLimit, freeLand } from './economy';
@@ -34,8 +36,10 @@ import type {
   RecruitableUnit,
   SabotageTarget,
   Taxes,
+  TreatyType,
 } from './types';
-import { ActionError, clamp, clone, getPlayer, nextId } from './util';
+import { ActionError, chronicle, clamp, clone, getPlayer, nextId, tell } from './util';
+import { concludeTreaty, offerBlocker, treatiesBetween } from './diplomacy';
 
 function actor(s: GameState, playerId: string): Player {
   if (s.phase !== 'orders') throw new ActionError('Das Spiel ist beendet.');
@@ -286,13 +290,52 @@ export const mut = {
     s.queue.push({ kind: 'vote', id: nextId(s, 'a'), from: pid, candidate });
   },
 
+  /** Diplomatisches Angebot; wird beim Jahreswechsel zugestellt. Die Mitgift wird hinterlegt. */
+  offerTreaty(s: GameState, pid: string, to: string, type: TreatyType, gold = 0): string {
+    const p = actor(s, pid);
+    getPlayer(s, to);
+    const blocker = offerBlocker(s, pid, to, type);
+    if (blocker) throw new ActionError(blocker);
+    const g = int(gold, 'Mitgift');
+    pay(p, g);
+    const id = nextId(s, 'a');
+    s.queue.push({ kind: 'offer', id, from: pid, to, treatyType: type, gold: g });
+    return id;
+  },
+
+  /** Nimmt ein zugestelltes Angebot an: Vertrag gilt ab sofort, die Mitgift geht an den Empfänger. */
+  acceptOffer(s: GameState, pid: string, offerId: string): void {
+    const p = actor(s, pid);
+    const offer = (s.offers ?? []).find((o) => o.id === offerId && o.to === pid);
+    if (!offer) throw new ActionError('Dieses Angebot liegt nicht (mehr) vor.');
+    const existing = treatiesBetween(s, offer.from, pid);
+    if (offer.type === 'trade' && existing.some((t) => t.type === 'trade')) throw new ActionError('Es besteht bereits ein Handelsabkommen.');
+    if (offer.type === 'nap' && existing.some((t) => t.type === 'nap' || t.type === 'alliance')) throw new ActionError('Es besteht bereits Frieden.');
+    if (offer.type === 'alliance' && existing.some((t) => t.type === 'alliance')) throw new ActionError('Es besteht bereits ein Bündnis.');
+    s.offers = (s.offers ?? []).filter((o) => o.id !== offerId);
+    concludeTreaty(s, offer.type, offer.from, pid);
+    p.gold += offer.gold;
+    chronicle(s, `${getPlayer(s, offer.from).name} und ${p.name} schließen ${TREATIES[offer.type].einen} ${TREATIES[offer.type].name}.`);
+    tell(s, offer.from, 'Vertrag geschlossen', `${p.name} hat ${TREATIES[offer.type].euren} ${TREATIES[offer.type].name} angenommen. Der Vertrag gilt ${TREATY_YEARS} Jahre.`, 'good');
+  },
+
+  /** Lehnt ein Angebot ab; die Mitgift geht an den Absender zurück. */
+  declineOffer(s: GameState, pid: string, offerId: string): void {
+    const p = actor(s, pid);
+    const offer = (s.offers ?? []).find((o) => o.id === offerId && o.to === pid);
+    if (!offer) throw new ActionError('Dieses Angebot liegt nicht (mehr) vor.');
+    s.offers = (s.offers ?? []).filter((o) => o.id !== offerId);
+    getPlayer(s, offer.from).gold += offer.gold;
+    tell(s, offer.from, 'Angebot abgelehnt', `${p.name} hat ${TREATIES[offer.type].euren} ${TREATIES[offer.type].name} abgelehnt.${offer.gold ? ` Die Mitgift von ${offer.gold.toLocaleString('de-DE')} Talern kehrt zurück.` : ''}`, 'info');
+  },
+
   /** Storniert eine eigene Aktion aus der Queue und erstattet die Kosten. */
   cancelAction(s: GameState, pid: string, actionId: string): void {
     const p = actor(s, pid);
     const a = s.queue.find((q) => q.id === actionId && q.from === pid);
     if (!a) throw new ActionError('Aktion nicht gefunden.');
     if (a.kind === 'attack') p.gold += a.marchCost;
-    if (a.kind === 'covert' || a.kind === 'bribe') p.gold += a.gold;
+    if (a.kind === 'covert' || a.kind === 'bribe' || a.kind === 'offer') p.gold += a.gold;
     s.queue = s.queue.filter((q) => q.id !== actionId);
   },
 
@@ -336,6 +379,9 @@ export const actions = {
   queueCovert: pure('queueCovert'),
   placeBribe: pure('placeBribe'),
   castVote: pure('castVote'),
+  offerTreaty: pure('offerTreaty'),
+  acceptOffer: pure('acceptOffer'),
+  declineOffer: pure('declineOffer'),
   cancelAction: pure('cancelAction'),
   endTurn: pure('endTurn'),
 };

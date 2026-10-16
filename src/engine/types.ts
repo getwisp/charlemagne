@@ -212,7 +212,41 @@ export interface VoteAction {
   candidate: string;
 }
 
-export type QueuedAction = AttackAction | CovertAction | BribeAction | VoteAction;
+/** Diplomatisches Angebot, das beim Jahreswechsel zugestellt wird. */
+export interface OfferAction {
+  kind: 'offer';
+  id: string;
+  from: string;
+  to: string;
+  treatyType: TreatyType;
+  /** Mitgift, bei Abgabe hinterlegt; bei Ablehnung oder Verfall zurück. */
+  gold: number;
+}
+
+export type QueuedAction = AttackAction | CovertAction | BribeAction | VoteAction | OfferAction;
+
+export type TreatyType = 'nap' | 'trade' | 'alliance';
+
+export interface Treaty {
+  id: string;
+  type: TreatyType;
+  parties: [string, string];
+  /** Erstes Jahr, in dem der Vertrag gilt */
+  since: number;
+  /** Letztes Jahr, in dem der Vertrag gilt (feste Laufzeit, keine Kündigung) */
+  until: number;
+}
+
+/** Zugestelltes Angebot, das der Empfänger in seinem Zug annehmen oder ablehnen kann. */
+export interface TreatyOffer {
+  id: string;
+  type: TreatyType;
+  from: string;
+  to: string;
+  gold: number;
+  /** Jahr, an dessen Ende das Angebot zugestellt wurde; es verfällt ein Jahr später. */
+  delivered: number;
+}
 
 export type Severity = 'info' | 'good' | 'warning' | 'error';
 
@@ -268,6 +302,10 @@ export interface GameState {
   /** Öffentliche Chronik */
   chronicle: { year: number; text: string }[];
   election: ElectionState | null;
+  /** Aktive Verträge (fehlt in älteren Spielständen) */
+  treaties?: Treaty[];
+  /** Zugestellte, noch unbeantwortete Angebote (fehlt in älteren Spielständen) */
+  offers?: TreatyOffer[];
   lastElection: ElectionResult | null;
   winnerId: string | null;
   endReason: string | null;

@@ -32,6 +32,9 @@ import {
   resolveInsolvency,
   resolveYear,
   T,
+  concludeTreaty,
+  treatiesBetween,
+  TRADE_TREATY_BONUS,
   type GameState,
 } from '../src/engine';
 
@@ -286,6 +289,130 @@ describe('Taverne', () => {
     s = actions.queueCovert(s, 'p1', 'p2', 'rob', 100000);
     expect(s.players[1].gold).toBe(goldTarget);
     expect(s.queue[0].kind).toBe('covert');
+  });
+});
+
+describe('Diplomatie', () => {
+  function threePlayers(): GameState {
+    const s = newGame({ seed: 5, players: ['A', 'B', 'C'].map((name) => ({ name, isAI: false })) });
+    s.year += 1;
+    return s;
+  }
+
+  it('Angebot: Mitgift wird hinterlegt, zugestellt und bei Annahme ausgezahlt', () => {
+    let s = threePlayers();
+    const [a, b] = s.players;
+    const goldA = a.gold;
+    s = actions.offerTreaty(s, a.id, b.id, 'trade', 1000);
+    expect(s.players[0].gold).toBe(goldA - 1000);
+    expect(() => actions.offerTreaty(s, a.id, b.id, 'trade', 0)).toThrow(/unterwegs/);
+    s = resolveYear(s);
+    expect(s.offers).toHaveLength(1);
+    const goldBNow = s.players[1].gold;
+    s = actions.acceptOffer(s, b.id, s.offers![0].id);
+    expect(s.players[1].gold).toBe(goldBNow + 1000);
+    const t = treatiesBetween(s, a.id, b.id);
+    expect(t).toHaveLength(1);
+    expect(t[0].until - t[0].since + 1).toBe(5);
+  });
+
+  it('Ablehnung und Verfall geben die Mitgift zurück, Verträge laufen nach 5 Jahren aus', () => {
+    let s = threePlayers();
+    const [a, b, c] = s.players;
+    s = actions.offerTreaty(s, a.id, b.id, 'nap', 500);
+    s = actions.offerTreaty(s, a.id, c.id, 'nap', 700);
+    s = resolveYear(s);
+    const before = s.players[0].gold;
+    s = actions.declineOffer(s, b.id, s.offers!.find((o) => o.to === b.id)!.id);
+    expect(s.players[0].gold).toBe(before + 500);
+    s = resolveYear(s); // C schweigt → verfällt
+    expect(s.offers).toHaveLength(0);
+    const msgs = (s.messages[a.id] ?? []).map((m) => m.title);
+    expect(msgs).toContain('Angebot verfallen');
+
+    concludeTreaty(s, 'nap', a.id, b.id);
+    for (let i = 0; i < 4; i++) s = resolveYear(s);
+    expect(treatiesBetween(s, a.id, b.id)).toHaveLength(1);
+    s = resolveYear(s);
+    expect(treatiesBetween(s, a.id, b.id)).toHaveLength(0);
+  });
+
+  it('Handelsabkommen: +5 % Mehrwertsteuer und Zölle', () => {
+    const s = threePlayers();
+    const p = s.players[0];
+    const base = calculateTaxes(p, 0);
+    const traded = calculateTaxes(p, 1);
+    expect(traded.salesTax).toBeCloseTo(base.salesTax * (1 + TRADE_TREATY_BONUS), -1);
+    expect(traded.tradeBonus).toBeGreaterThan(0);
+    expect(calculateTaxes(p, 10).salesTax).toBe(calculateTaxes(p, 3).salesTax);
+  });
+
+  it('Vertragsbruch: Skandal, Casus Belli und Groll aller anderen', () => {
+    const s = threePlayers();
+    const [a, b, c] = s.players;
+    concludeTreaty(s, 'nap', a.id, b.id);
+    a.military.mercenaries = 100;
+    resolveAttack(s, { kind: 'attack', id: 'x', from: a.id, target: b.id, fraction: 1, marchCost: 0 }, { [a.id]: 1 });
+    expect(treatiesBetween(s, a.id, b.id)).toHaveLength(0);
+    expect(a.scandals).toBe(1);
+    expect(b.casusBelli).toContain(a.id);
+    expect(c.grudges[a.id]).toBeGreaterThan(0);
+  });
+
+  it('Bündnis: Partner kämpft mit und trägt Verluste; beim Wortbruch hilft der Angreifer nicht', () => {
+    const run = (allied: 'none' | 'c' | 'a+c') => {
+      const s = threePlayers();
+      const [a, b, c] = s.players;
+      a.military.mercenaries = 300;
+      b.military.mercenaries = 100;
+      c.military.mercenaries = 400;
+      if (allied !== 'none') concludeTreaty(s, 'alliance', b.id, c.id);
+      if (allied === 'a+c') concludeTreaty(s, 'alliance', a.id, b.id);
+      const r = resolveAttack(s, { kind: 'attack', id: 'x', from: a.id, target: b.id, fraction: 1, marchCost: 0 }, { [a.id]: 1 })!;
+      return { r, c, a };
+    };
+    const alone = run('none');
+    const helped = run('c');
+    expect(helped.r.defensePower).toBeGreaterThan(alone.r.defensePower * 1.5);
+    expect(helped.c.military.mercenaries).toBeLessThan(400);
+    expect(alone.c.military.mercenaries).toBe(400);
+    // A bricht sein Bündnis mit B: A hilft natürlich nicht, C aber schon.
+    const betrayed = run('a+c');
+    expect(betrayed.a.scandals).toBe(1);
+    expect(betrayed.c.military.mercenaries).toBeLessThan(400);
+  });
+
+  it('Enttarnte Spionage lässt Verträge bestehen, enttarnter Raub zerreißt sie', () => {
+    const exposed = (mission: 'spy' | 'rob') => {
+      for (let seed = 1; seed < 200; seed++) {
+        const s = newGame({ seed, players: ['A', 'B'].map((name) => ({ name, isAI: false })) });
+        const [a, b] = s.players;
+        a.title = T.GRAF;
+        b.military.guards = 10000;
+        b.justice = 5;
+        concludeTreaty(s, 'trade', a.id, b.id);
+        const ok = resolveCovert(s, { kind: 'covert', id: 'c', from: a.id, target: b.id, mission, gold: 1 });
+        if (!ok && b.casusBelli.includes(a.id)) return treatiesBetween(s, a.id, b.id).length;
+      }
+      throw new Error('keine Enttarnung');
+    };
+    expect(exposed('spy')).toBe(1);
+    expect(exposed('rob')).toBe(0);
+  });
+
+  it('KI greift Vertragspartner nicht an und beantwortet Angebote', () => {
+    let s = newGame({
+      seed: 9,
+      players: [
+        { name: 'Mensch', isAI: false },
+        { name: 'KI', isAI: true, archetype: 'kirchenfuerst' },
+      ],
+    });
+    s = actions.offerTreaty(s, 'p1', 'p2', 'trade', 0);
+    s = resolveYear(s);
+    s = planAiTurn(s, 'p2');
+    expect(s.offers).toHaveLength(0);
+    expect(treatiesBetween(s, 'p1', 'p2')).toHaveLength(1);
   });
 });
 

@@ -1,4 +1,4 @@
-import { actions, calculateEconomyTurn, JUSTICE_CRIME, JUSTICE_NAMES, TAX_LIMITS, type Taxes } from '../../engine';
+import { actions, previewEconomy, JUSTICE_CRIME, JUSTICE_NAMES, TAX_LIMITS, type Taxes } from '../../engine';
 import { GroupBox, Money, n } from '../components/controls';
 import { useGame } from '../context';
 
@@ -6,7 +6,7 @@ const TAX_LABELS: Record<keyof Taxes, string> = { income: 'Einkommensteuer', sal
 
 export function TreasuryWindow() {
   const { state, me, act, canAct } = useGame();
-  const preview = calculateEconomyTurn(me, state.market);
+  const preview = previewEconomy(state, me);
   const t = preview.taxes;
 
   return (
@@ -69,6 +69,14 @@ export function TreasuryWindow() {
                 <Money value={t.tolls} />
               </td>
             </tr>
+            {t.tradeBonus > 0 && (
+              <tr className="muted">
+                <td>&nbsp;&nbsp;davon Handelsabkommen</td>
+                <td className="num">
+                  <Money value={t.tradeBonus} signed />
+                </td>
+              </tr>
+            )}
             {t.cityBonus > 0 && (
               <tr>
                 <td>Stadt-Bonus</td>

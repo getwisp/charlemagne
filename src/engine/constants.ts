@@ -346,6 +346,32 @@ export const GRUDGE = {
   caughtSpy: 30,
   decay: 0.85,
   envy: 25,
+  /** Wortbruch: Groll aller anderen Herrscher gegen den Vertragsbrecher */
+  treatyBreach: 25,
+} as const;
+
+// ---------------------------------------------------------------- Diplomatie
+/** Feste Laufzeit aller Verträge in Jahren – eine Kündigung gibt es nicht. */
+export const TREATY_YEARS = 5;
+/** Anteil des Heeres, den ein Verbündeter zur Verteidigung schickt. */
+export const ALLIANCE_SHARE = 0.25;
+/** Zusätzliches Handelsvolumen (Mehrwertsteuer und Zölle) je Handelsabkommen. */
+export const TRADE_TREATY_BONUS = 0.05;
+/** Mehr als so viele Handelsabkommen bringen keinen weiteren Bonus. */
+export const TRADE_TREATY_MAX = 3;
+
+export const TREATIES = {
+  nap: { name: 'Nichtangriffspakt', der: 'der', den: 'den', einen: 'einen', euren: 'Euren', short: 'NAP', description: 'Kein Krieg zwischen den Partnern.' },
+  trade: { name: 'Handelsabkommen', der: 'das', den: 'das', einen: 'ein', euren: 'Euer', short: 'Handel', description: 'Beide erhalten +5 % Handelsvolumen (Mehrwertsteuer und Zölle).' },
+  alliance: {
+    name: 'Verteidigungsbündnis',
+    der: 'das',
+    den: 'das',
+    einen: 'ein',
+    euren: 'Euer',
+    short: 'Bündnis',
+    description: 'Enthält einen Nichtangriffspakt. Wird ein Partner angegriffen, kämpfen 25 % des Heeres des anderen mit.',
+  },
 } as const;
 
 export const PLAYER_COLORS = [

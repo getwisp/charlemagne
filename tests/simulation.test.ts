@@ -45,9 +45,13 @@ describe('KI-Simulation', () => {
     const titleSum = [0, 0, 0, 0];
     const emperor = [0, 0, 0, 0];
     let years = 0;
+    const diplo = { treaties: 0, breaches: 0, allianceBattles: 0 };
     for (let seed = 1; seed <= seeds; seed++) {
       const s = runAiGame(seed, 120);
       years += s.year - 1700;
+      diplo.treaties += s.chronicle.filter((c) => / schließen /.test(c.text)).length;
+      diplo.breaches += s.chronicle.filter((c) => c.text.startsWith('Wortbruch')).length;
+      diplo.allianceBattles += s.chronicle.filter((c) => c.text.includes('Bündnistruppen')).length;
       const w = s.players.findIndex((p) => p.id === s.winnerId);
       wins[w]++;
       if (s.players[w].title === 8) emperor[w]++;
@@ -56,6 +60,9 @@ describe('KI-Simulation', () => {
     console.log(`\n${seeds} Partien, Ø Dauer ${(years / seeds).toFixed(0)} Jahre`);
     names.forEach((n, i) =>
       console.log(`  ${n.padEnd(15)} Siege ${String(wins[i]).padStart(2)} (Kaiser ${emperor[i]})  Ø Endtitel ${(titleSum[i] / seeds).toFixed(2)}`),
+    );
+    console.log(
+      `  Diplomatie je Partie: ${(diplo.treaties / seeds).toFixed(1)} Verträge, ${(diplo.breaches / seeds).toFixed(2)} Wortbrüche, ${(diplo.allianceBattles / seeds).toFixed(2)} Schlachten mit Bündnistruppen`,
     );
   });
 

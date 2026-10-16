@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import {
   actions,
+  alliesOf,
+  ALLIANCE_SHARE,
+  hasPeace,
+  TREATIES,
+  treatiesBetween,
   armySize,
   attackPower,
   defensePower,
@@ -182,6 +187,10 @@ function Campaign() {
   const t = state.players.find((p) => p.id === target);
   const myAttacks = state.queue.filter((a) => a.kind === 'attack' && a.from === me.id);
   const hasCb = t ? me.casusBelli.includes(t.id) : false;
+  const breach = t ? hasPeace(state, me.id, t.id) : false;
+  // Bündnisse sind öffentlich – deren Hilfstruppen lassen sich grob abschätzen.
+  const allies = t ? alliesOf(state, t.id).filter((id) => id !== me.id).map((id) => state.players.find((p) => p.id === id)!) : [];
+  const allyHelp = allies.reduce((sum, a) => sum + (a.debtorPrison > 0 ? 0 : publicArmyEstimate(a) * ALLIANCE_SHARE), 0);
 
   return (
     <div>
@@ -214,6 +223,12 @@ function Campaign() {
                   <td>Geschätzte Verteidigung von {t.name}</td>
                   <td className="num">~{n(publicArmyEstimate(t))}</td>
                 </tr>
+                {allies.length > 0 && (
+                  <tr>
+                    <td>Bündnistruppen ({allies.map((a) => a.name).join(', ')})</td>
+                    <td className="num">~{n(allyHelp)}</td>
+                  </tr>
+                )}
                 <tr>
                   <td>Marschkosten</td>
                   <td className="num">{hasCb ? 'keine (Casus Belli)' : `${n(marchCost(me, fraction / 100, t.id))} Taler`}</td>
@@ -222,9 +237,15 @@ function Campaign() {
             </table>
           </div>
         )}
+        {breach && t && (
+          <div className="sunken field" style={{ padding: 6 }}>
+            <PixelIcon name="warning" /> <b>Vertragsbruch!</b> Mit {t.name} besteht {treatiesBetween(state, me.id, t.id).filter((x) => x.type !== 'trade').map((x) => `${TREATIES[x.type].einen} ${TREATIES[x.type].name}`).join(' und ')}. Ein Angriff
+            bricht ihn: alle Verträge mit {t.name} enden, Ihr erhaltet einen Skandal, {t.name} einen Casus Belli gegen Euch, und alle anderen Herrscher tragen es Euch nach.
+          </div>
+        )}
         <div className="hint">
           Kampfkraft = Basiskraft × Moral × Ausbildung × Defensivbonus (Paläste, Eingraben). Der Verlierer büßt 10–25 % seines Landes und Bargeldes ein – auch der Angreifer! Die Schlacht
-          wird erst beim Jahreswechsel geschlagen. Die zurückbleibenden Truppen verteidigen Euer Land.
+          wird erst beim Jahreswechsel geschlagen. Die zurückbleibenden Truppen verteidigen Euer Land. Verbündete des Verteidigers schicken {ALLIANCE_SHARE * 100} % ihres Heeres.
         </div>
         <div className="btn-row">
           <button className="btn primary" disabled={!canAct || !t} onClick={() => act((s) => actions.queueAttack(s, me.id, target, fraction / 100))}>
