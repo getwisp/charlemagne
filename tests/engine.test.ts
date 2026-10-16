@@ -440,6 +440,23 @@ describe('Diplomatie', () => {
     expect(planAiTurn(s, 'p2').players[1].justice).toBe(2);
   });
 
+  it('Ränkeschmiedin stellt ab Kurfürst ihre Intrigen ein', () => {
+    const covertCount = (title: number) => {
+      let n = 0;
+      for (let seed = 1; seed <= 30; seed++) {
+        const s = newGame({ seed, players: [{ name: 'A', isAI: false }, { name: 'M', isAI: true, archetype: 'raenkeschmiedin' }] });
+        s.year += 5;
+        s.players[0].title = T.KOENIG;
+        s.players[1].title = title;
+        s.players[1].gold = 1e6;
+        n += planAiTurn(s, 'p2').queue.filter((a) => a.kind === 'covert').length;
+      }
+      return n;
+    };
+    expect(covertCount(T.HERZOG)).toBeGreaterThan(0);
+    expect(covertCount(T.KURFUERST)).toBe(0);
+  });
+
   it('KI greift Vertragspartner nicht an und beantwortet Angebote', () => {
     let s = newGame({
       seed: 9,

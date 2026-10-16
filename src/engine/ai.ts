@@ -71,7 +71,7 @@ function budget(p: Player): number {
  */
 export const TITLE_BLOCKER_MULTIPLIER = 3.0;
 
-/** Ab diesem Titel mildert die KI ihre Justiz auf höchstens Stufe 3 (Hexenprozesse vermeiden). */
+/** Ab diesem Titel meidet die KI Skandale: Justiz höchstens Stufe 3, die Ränkeschmiedin stellt ihre Intrigen ein. */
 export const CROWN_CAUTION_TITLE = T.KURFUERST;
 
 /** Charakter-Gewichte je nach Spielphase. */
@@ -724,6 +724,8 @@ function leaderIntrigue(s: GameState, p: Player, w: Weights): void {
   if (rivals.length === 0) return;
   const target = pickIntrigueTarget(s, p);
   if (!target) return;
+  // Vor der Krone hält sie die Weste sauber: Jeder enttarnte Agent ist ein Skandal, und Skandale kosten Bischofsstimmen.
+  if (p.title >= CROWN_CAUTION_TITLE) return;
   const available = (['rob', 'sabotage', 'assassinate', 'spy'] as CovertMission[]).filter((k) => p.title >= COVERT[k].minTitle);
   if (available.length === 0) return;
 
