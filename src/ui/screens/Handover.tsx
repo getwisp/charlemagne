@@ -1,15 +1,14 @@
 import { TITLES, type GameState, type Player } from '../../engine';
 import { Modal } from '../components/Window';
+import { PixelIcon } from '../icons';
 
 /** Hot-Seat: Bildschirm zur Übergabe, damit niemand fremde Werte sieht. */
 export function Handover({ state, player, onReady }: { state: GameState; player: Player; onReady: () => void }) {
   const unread = state.messages[player.id]?.length ?? 0;
   return (
-    <Modal title="Willkommen bei Kaiser-Klon" icon="🔑" width={400} opaque>
+    <Modal title="Willkommen bei Kaiser-Klon" icon="key" width={400} opaque>
       <div style={{ display: 'flex', gap: 14, padding: '6px 4px' }}>
-        <div style={{ fontSize: 40 }} aria-hidden>
-          🗝️
-        </div>
+        <PixelIcon name="key" size={48} />
         <div>
           <p style={{ marginTop: 0 }}>
             Anno <b>{state.year}</b>. Bitte übergebt den Rechner an:

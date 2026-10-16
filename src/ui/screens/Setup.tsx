@@ -3,6 +3,7 @@ import { ARCHETYPES, type Archetype, type GameState, type PlayerSetup } from '..
 import { GroupBox } from '../components/controls';
 import { Alert, Modal } from '../components/Window';
 import { loadAutosave, pickSaveFile } from '../storage';
+import { PixelIcon } from '../icons';
 
 type SlotType = 'human' | 'ai' | 'none';
 interface Slot {
@@ -54,11 +55,9 @@ export function Setup({ onStart, onLoad }: { onStart: (p: PlayerSetup[], endYear
   }
 
   return (
-    <Modal title="Kaiser-Klon Setup" icon="👑" width={620} opaque>
+    <Modal title="Kaiser-Klon Setup" icon="castle" width={620} opaque>
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-        <div style={{ fontSize: 48, lineHeight: 1 }} aria-hidden>
-          🏰
-        </div>
+        <PixelIcon name="castle" size={64} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 4 }}>Projekt Kaiser-Klon</div>
           <div className="hint">

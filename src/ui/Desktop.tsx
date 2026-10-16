@@ -17,7 +17,8 @@ import {
 } from '../engine';
 import { BossScreen } from './BossScreen';
 import { n } from './components/controls';
-import { Alert, Modal, Window } from './components/Window';
+import { Alert, Modal, SEVERITY_ICON, Window } from './components/Window';
+import { PixelIcon, type IconName } from './icons';
 import { useGame } from './context';
 import { downloadSave, pickSaveFile } from './storage';
 import { BankWindow } from './windows/BankWindow';
@@ -49,25 +50,25 @@ export type WinId =
 
 interface WinDef {
   title: string;
-  icon: string;
+  icon: IconName;
   width: number;
   component: ComponentType<{ read: HeraldMessage[] }>;
   desktop: boolean;
 }
 
 const WINDOWS: Record<WinId, WinDef> = {
-  granary: { title: 'Kornkammer', icon: '🌾', width: 430, component: GranaryWindow, desktop: true },
-  market: { title: 'Marktplatz', icon: '⚖️', width: 430, component: MarketWindow, desktop: true },
-  build: { title: 'Bauamt', icon: '🏗️', width: 560, component: BuildWindow, desktop: true },
-  treasury: { title: 'Schatzamt', icon: '💰', width: 480, component: TreasuryWindow, desktop: true },
-  bank: { title: 'Bankhaus Fugger', icon: '🏦', width: 520, component: BankWindow, desktop: true },
-  barracks: { title: 'Kaserne', icon: '⚔️', width: 640, component: BarracksWindow, desktop: true },
-  tavern: { title: 'Taverne „Zum goldenen Dolch“', icon: '🍺', width: 520, component: TavernWindow, desktop: true },
-  throne: { title: 'Thronsaal', icon: '👑', width: 600, component: ThroneWindow, desktop: true },
-  stats: { title: 'Statistik', icon: '📈', width: 520, component: StatsWindow, desktop: true },
-  chronicle: { title: 'Reichschronik', icon: '📖', width: 460, component: ChronicleWindow, desktop: true },
-  herald: { title: 'Herold', icon: '📯', width: 460, component: HeraldWindow, desktop: true },
-  help: { title: 'Hilfe', icon: '❓', width: 560, component: HelpWindow, desktop: true },
+  granary: { title: 'Kornkammer', icon: 'granary', width: 430, component: GranaryWindow, desktop: true },
+  market: { title: 'Marktplatz', icon: 'market', width: 430, component: MarketWindow, desktop: true },
+  build: { title: 'Bauamt', icon: 'build', width: 560, component: BuildWindow, desktop: true },
+  treasury: { title: 'Schatzamt', icon: 'treasury', width: 480, component: TreasuryWindow, desktop: true },
+  bank: { title: 'Bankhaus Fugger', icon: 'bank', width: 520, component: BankWindow, desktop: true },
+  barracks: { title: 'Kaserne', icon: 'barracks', width: 640, component: BarracksWindow, desktop: true },
+  tavern: { title: 'Taverne „Zum goldenen Dolch“', icon: 'tavern', width: 520, component: TavernWindow, desktop: true },
+  throne: { title: 'Thronsaal', icon: 'throne', width: 600, component: ThroneWindow, desktop: true },
+  stats: { title: 'Statistik', icon: 'stats', width: 520, component: StatsWindow, desktop: true },
+  chronicle: { title: 'Reichschronik', icon: 'chronicle', width: 460, component: ChronicleWindow, desktop: true },
+  herald: { title: 'Herold', icon: 'herald', width: 460, component: HeraldWindow, desktop: true },
+  help: { title: 'Hilfe', icon: 'help', width: 560, component: HelpWindow, desktop: true },
 };
 
 interface OpenWin {
@@ -216,15 +217,16 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
           </div>
           {blocked && (
             <div className="sunken" style={{ background: '#ffffe1', padding: 4 }}>
-              ⛓️ Ihr seid im <b>{blocked}</b> und könnt dieses Jahr nichts befehlen.
+              <PixelIcon name="chain" /> Ihr seid im <b>{blocked}</b> und könnt dieses Jahr nichts befehlen.
             </div>
           )}
-          <Stat label="💰 Gold" value={`${n(me.gold)}`} neg={me.gold < 0} delta={delta((h) => h.cash)} />
-          <Stat label="🏦 Sparkonto" value={n(me.savings)} />
-          <Stat label="🌾 Korn" value={`${n(me.grain)} Sch.`} delta={delta((h) => h.grain)} />
-          <Stat label="🗺️ Land" value={`${n(me.land)} ha`} delta={delta((h) => h.land)} title="Gesamtland = bebautes Land + Lehnsland + freies Ackerland" />
+          <Stat icon="gold" label="Gold" value={`${n(me.gold)}`} neg={me.gold < 0} delta={delta((h) => h.cash)} />
+          <Stat icon="bank" label="Sparkonto" value={n(me.savings)} />
+          <Stat icon="granary" label="Korn" value={`${n(me.grain)} Sch.`} delta={delta((h) => h.grain)} />
+          <Stat icon="land" label="Land" value={`${n(me.land)} ha`} delta={delta((h) => h.land)} title="Gesamtland = bebautes Land + Lehnsland + freies Ackerland" />
           <Stat
-            label="🌱 Freies Ackerland"
+            icon="sprout"
+            label="Freies Ackerland"
             value={`${n(freeLand(me))} ha`}
             warn={freeLand(me) < HECTARES_PER_BUILDING}
             title={
@@ -235,9 +237,9 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
           <div className="hint" style={{ margin: '-2px 4px 0' }}>
             bebaut {n(builtLand(me))} · Lehen {n(fiefLand(me))}
           </div>
-          <Stat label="👥 Bürger" value={n(me.population)} delta={delta((h) => h.population)} />
-          <Stat label="🏘️ Städte" value={`${cityCount(me.buildings)}`} />
-          <Stat label="🛡️ Garde / Heer" value={`${n(me.military.guards)} / ${n(me.military.mercenaries + me.military.cannons + me.military.squires + me.military.knights)}`} />
+          <Stat icon="people" label="Bürger" value={n(me.population)} delta={delta((h) => h.population)} />
+          <Stat icon="cities" label="Städte" value={`${cityCount(me.buildings)}`} />
+          <Stat icon="army" label="Garde / Heer" value={`${n(me.military.guards)} / ${n(me.military.mercenaries + me.military.cannons + me.military.squires + me.military.knights)}`} />
           <hr className="etched" />
           <Stat label="Kornpreis" value={`${state.market.grainPrice} T/10 Sch.`} />
           <Stat label="Landpreis" value={`${state.market.landPrice} T/ha`} />
@@ -257,7 +259,7 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
           </div>
           {state.election && (
             <button className="btn" onClick={() => openWindow('throne')}>
-              🗳️ Reichstag {state.election.year}!
+              <PixelIcon name="ballot" /> Reichstag {state.election.year}!
             </button>
           )}
           <button className="btn primary" style={{ marginTop: 6, minHeight: 30, fontWeight: 'bold' }} onClick={() => (blocked ? endTurn() : setConfirmEnd(true))}>
@@ -278,8 +280,8 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
             .filter((id) => WINDOWS[id].desktop)
             .map((id) => (
               <button key={id} className={`icon ${activeId === id ? 'selected' : ''}`} onClick={() => openWindow(id)}>
-                <span className="glyph" aria-hidden>
-                  {WINDOWS[id].icon}
+                <span className="glyph">
+                  <PixelIcon name={WINDOWS[id].icon} size={32} />
                 </span>
                 <span className="caption">{WINDOWS[id].title.replace(/ „.*“/, '')}</span>
               </button>
@@ -320,7 +322,7 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
           aria-haspopup="menu"
           aria-expanded={startOpen}
         >
-          <span aria-hidden>🏰</span> Start
+          <PixelIcon name="castle" /> Start
         </button>
         <div className="tasks">
           {open.map((w) => (
@@ -329,15 +331,18 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
               className={`btn ${activeId === w.id ? 'pressed' : ''}`}
               onClick={() => (activeId === w.id ? minimize(w.id) : openWindow(w.id))}
             >
-              {WINDOWS[w.id].icon} {WINDOWS[w.id].title}
+              <PixelIcon name={WINDOWS[w.id].icon} /> {WINDOWS[w.id].title}
             </button>
           ))}
         </div>
         <button className="btn small" onClick={() => setBoss(true)} title="Boss-Taste (F2)">
-          📊 Boss
+          <PixelIcon name="spreadsheet" /> Boss
         </button>
         <div className="tray sunken">
-          📯 {unread.length} · Anno {state.year}
+          <span title={`${unread.length} ungelesene Meldung(en)`}>
+            <PixelIcon name="herald" />
+          </span>{' '}
+          Anno {state.year}
         </div>
       </footer>
 
@@ -345,22 +350,22 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
         <div className="start-menu raised" role="menu" onPointerDown={(e) => e.stopPropagation()}>
           <div className="stripe">Kaiser-Klon 98</div>
           <ul>
-            <MenuItem icon="👑" label="Thronsaal" onClick={() => openWindow('throne')} />
-            <MenuItem icon="📯" label="Herold" onClick={() => openWindow('herald')} />
-            <MenuItem icon="📖" label="Reichschronik" onClick={() => openWindow('chronicle')} />
+            <MenuItem icon="throne" label="Thronsaal" onClick={() => openWindow('throne')} />
+            <MenuItem icon="herald" label="Herold" onClick={() => openWindow('herald')} />
+            <MenuItem icon="chronicle" label="Reichschronik" onClick={() => openWindow('chronicle')} />
             <li className="sep" />
             <MenuItem
-              icon="💾"
+              icon="disk"
               label="Spielstand speichern…"
               onClick={() => {
                 setStartOpen(false);
                 downloadSave(state);
               }}
             />
-            <MenuItem icon="📂" label="Spielstand laden…" onClick={load} />
-            <MenuItem icon="❓" label="Hilfe" onClick={() => openWindow('help')} />
+            <MenuItem icon="folder" label="Spielstand laden…" onClick={load} />
+            <MenuItem icon="help" label="Hilfe" onClick={() => openWindow('help')} />
             <li className="sep" />
-            <MenuItem icon="🚪" label="Hauptmenü" onClick={onQuit} />
+            <MenuItem icon="door" label="Hauptmenü" onClick={onQuit} />
           </ul>
         </div>
       )}
@@ -369,10 +374,10 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
       {unread.length > 0 && !boss && <HeraldReport year={state.year} messages={unread} onOk={markAllRead} />}
 
       {confirmEnd && (
-        <Modal title="Zug beenden" icon="❔" width={420} onClose={() => setConfirmEnd(false)}>
+        <Modal title="Zug beenden" icon="question" width={420} onClose={() => setConfirmEnd(false)}>
           <div className="alert-body">
-            <div className="alert-icon" aria-hidden>
-              {warnings.length ? '⚠️' : '❔'}
+            <div className="alert-icon">
+              <PixelIcon name={warnings.length ? 'warning' : 'question'} size={32} />
             </div>
             <div className="alert-text">
               {warnings.length > 0 ? (
@@ -402,9 +407,11 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
       )}
 
       {confirmReset && (
-        <Modal title="Zug zurücksetzen" icon="↩️" width={380} onClose={() => setConfirmReset(false)}>
+        <Modal title="Zug zurücksetzen" icon="question" width={380} onClose={() => setConfirmReset(false)}>
           <div className="alert-body">
-            <div className="alert-icon">❔</div>
+            <div className="alert-icon">
+              <PixelIcon name="question" size={32} />
+            </div>
             <div className="alert-text">Alle Befehle dieses Jahres verwerfen und zum Stand bei Zugbeginn zurückkehren?</div>
           </div>
           <div className="btn-row">
@@ -431,17 +438,16 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
 }
 
 const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, good: 2, info: 3 };
-const SEVERITY_ICON: Record<Severity, string> = { error: '⛔', warning: '⚠️', good: '📜', info: 'ℹ️' };
 
 /** Jahresbericht des Herolds: alle Meldungen in einer Box, Wichtiges zuerst. */
 function HeraldReport({ year, messages, onOk }: { year: number; messages: HeraldMessage[]; onOk: () => void }) {
   const sorted = [...messages].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
   const worst = sorted[0].severity;
   return (
-    <Modal title={`Herold – Anno ${year}`} icon="📯" width={500}>
+    <Modal title={`Herold – Anno ${year}`} icon="herald" width={500}>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '4px 4px 8px' }}>
-        <div className="alert-icon" aria-hidden>
-          {SEVERITY_ICON[worst]}
+        <div className="alert-icon">
+          <PixelIcon name={SEVERITY_ICON[worst]} size={32} />
         </div>
         <div>
           Der Herold verkündet {messages.length === 1 ? 'eine Meldung' : `${messages.length} Meldungen`} zum Jahreswechsel.
@@ -451,7 +457,7 @@ function HeraldReport({ year, messages, onOk }: { year: number; messages: Herald
         {sorted.map((m) => (
           <div key={m.id} className={`herald-item herald-${m.severity}`}>
             <div>
-              <span aria-hidden>{SEVERITY_ICON[m.severity]}</span> <b>{m.title}</b>
+              <PixelIcon name={SEVERITY_ICON[m.severity]} /> <b>{m.title}</b>
             </div>
             <div style={{ whiteSpace: 'pre-wrap', paddingLeft: 22 }}>{m.text}</div>
           </div>
@@ -467,6 +473,7 @@ function HeraldReport({ year, messages, onOk }: { year: number; messages: Herald
 }
 
 function Stat({
+  icon,
   label,
   value,
   neg,
@@ -474,6 +481,7 @@ function Stat({
   title,
   delta,
 }: {
+  icon?: IconName;
   label: string;
   value: string;
   neg?: boolean;
@@ -486,7 +494,9 @@ function Stat({
   const deltaTitle = d !== 0 ? `Im letzten Jahr: ${d > 0 ? '+' : ''}${n(d)}` : undefined;
   return (
     <div className="stat sunken" title={[title, deltaTitle].filter(Boolean).join(' – ') || undefined}>
-      <span className="label">{label}</span>
+      <span className="label">
+        {icon && <PixelIcon name={icon} />} {label}
+      </span>
       <span className={`value ${neg ? 'neg' : warn ? 'warn' : ''}`}>
         {d !== 0 && <span className={`delta ${d > 0 ? 'pos' : 'neg'}`}>{d > 0 ? '▲' : '▼'}</span>}
         {value}
@@ -495,13 +505,11 @@ function Stat({
   );
 }
 
-function MenuItem({ icon, label, onClick }: { icon: string; label: string; onClick: () => void }) {
+function MenuItem({ icon, label, onClick }: { icon: IconName; label: string; onClick: () => void }) {
   return (
     <li role="none">
       <button role="menuitem" onClick={onClick}>
-        <span aria-hidden style={{ width: 20, textAlign: 'center' }}>
-          {icon}
-        </span>
+        <PixelIcon name={icon} size={24} />
         {label}
       </button>
     </li>

@@ -36,6 +36,10 @@ export function HelpWindow() {
       <p>
         <b>F2</b> – Boss-Taste (Tabellenkalkulation). <b>Esc</b> – zurück.
       </p>
+      <h4>Danksagung</h4>
+      <p>
+        Schrift: <b>WIN95FA</b> von Alina Sava, lizenziert unter der SIL Open Font License 1.1 (siehe <code>licenses/WIN95FA-OFL.txt</code>). Alle Symbole sind eigene Pixelgrafiken.
+      </p>
       <h4>Mehrspieler</h4>
       <p>Hot-Seat: Alle Spieler nacheinander am selben Rechner. Asynchron: Spielstand über das Startmenü speichern und die Datei dem nächsten Spieler schicken.</p>
     </div>

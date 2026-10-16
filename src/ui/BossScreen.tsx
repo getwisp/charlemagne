@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { PixelIcon, type IconName } from './icons';
 
 const COLS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
 const ROWS = 32;
@@ -40,7 +41,7 @@ export function BossScreen({ onExit }: { onExit: () => void }) {
   return (
     <div className="boss" role="application" aria-label="Tabellenkalkulation">
       <div className="xl-title titlebar">
-        <span aria-hidden>📗</span>
+        <PixelIcon name="spreadsheet" />
         <span style={{ flex: 1 }}>Tabellenkalkulation - Quartalsbericht_Q4_final_v3.xls</span>
         <button className="btn tb-btn" onClick={onExit} aria-label="Schließen" title="Zurück (Esc)">
           ✕
@@ -52,11 +53,19 @@ export function BossScreen({ onExit }: { onExit: () => void }) {
         ))}
       </div>
       <div className="xl-toolbar">
-        {['🗋', '📂', '💾', '🖨', '✂', '📋', '↶', 'Σ', 'ƒ', '↓A', '📊', '%', ',0'].map((t) => (
+        {(['page', 'folder', 'disk', 'printer', 'scissors'] as IconName[]).map((name) => (
+          <span key={name} className="raised">
+            <PixelIcon name={name} />
+          </span>
+        ))}
+        {['↶', 'Σ', 'ƒ', '↓A', '%', ',0'].map((t) => (
           <span key={t} className="raised">
             {t}
           </span>
         ))}
+        <span className="raised">
+          <PixelIcon name="stats" />
+        </span>
         <select className="input" style={{ marginLeft: 8 }} defaultValue="Arial" aria-label="Schriftart">
           <option>Arial</option>
         </select>

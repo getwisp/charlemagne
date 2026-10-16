@@ -22,6 +22,7 @@ import {
 } from '../../engine';
 import { GroupBox, n, NumberField, Tabs } from '../components/controls';
 import { useGame } from '../context';
+import { PixelIcon } from '../icons';
 
 type Tab = 'troops' | 'training' | 'campaign';
 const RECRUITABLE: RecruitableUnit[] = ['guards', 'mercenaries', 'cannons', 'squires'];
@@ -165,7 +166,7 @@ function Training() {
         </table>
         {landless > 0 && (
           <div className="neg" style={{ marginTop: 4 }}>
-            ⚠️ {landless} Ritter sind landlos! Sie fordern 150 Taler Strafsold je Kopf – oder desertieren.
+            <PixelIcon name="warning" /> {landless} Ritter sind landlos! Sie fordern 150 Taler Strafsold je Kopf – oder desertieren.
           </div>
         )}
       </GroupBox>
@@ -191,7 +192,7 @@ function Campaign() {
             {rivals.map((r) => (
               <option key={r.id} value={r.id}>
                 {TITLES[r.title]} {r.name}
-                {me.casusBelli.includes(r.id) ? ' ⚔ Casus Belli' : ''}
+                {me.casusBelli.includes(r.id) ? ' – Casus Belli!' : ''}
               </option>
             ))}
           </select>

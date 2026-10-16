@@ -11,6 +11,7 @@ import {
 } from '../../engine';
 import { GroupBox, n, NumberField, Progress, Tabs } from '../components/controls';
 import { useGame } from '../context';
+import { PixelIcon } from '../icons';
 
 type Tab = 'title' | 'rivals' | 'reichstag';
 
@@ -23,7 +24,7 @@ export function ThroneWindow() {
         tabs={[
           { id: 'title', label: 'Adelsstand' },
           { id: 'rivals', label: 'Rivalen' },
-          { id: 'reichstag', label: state.election ? 'Reichstag 🗳️' : 'Reichstag' },
+          { id: 'reichstag', label: state.election ? 'Reichstag (Wahl!)' : 'Reichstag' },
         ]}
         active={tab}
         onChange={setTab}
@@ -61,7 +62,7 @@ function TitleTab() {
           {reqs.map((r) => (
             <div key={r.key} style={{ display: 'grid', gridTemplateColumns: '110px 1fr 130px', gap: 6, alignItems: 'center', marginBottom: 3 }}>
               <span>
-                {r.met ? '✅' : '⬜'} {r.label}
+                <span className={`w95-check ${r.met ? 'on' : ''}`} aria-label={r.met ? 'erfüllt' : 'offen'} /> {r.label}
               </span>
               <Progress value={r.progress} done={r.met} />
               <span style={{ textAlign: 'right' }} className={r.met ? 'pos' : ''}>
@@ -82,7 +83,7 @@ function TitleTab() {
       )}
       {me.casusBelli.length > 0 && (
         <div className="sunken field" style={{ padding: 6 }}>
-          ⚔️ Casus Belli gegen: <b>{me.casusBelli.map((id) => state.players.find((p) => p.id === id)?.name ?? id).join(', ')}</b> – Moralbonus und keine Marschkosten.
+          <PixelIcon name="barracks" /> Casus Belli gegen: <b>{me.casusBelli.map((id) => state.players.find((p) => p.id === id)?.name ?? id).join(', ')}</b> – Moralbonus und keine Marschkosten.
         </div>
       )}
     </div>
@@ -119,7 +120,12 @@ function RivalsTab() {
                 <td className="num">{n(p.population)}</td>
                 <td className="num">
                   {p.buildings}
-                  {p.cathedrals > 0 ? ` (${p.cathedrals}⛪)` : ''}
+                  {p.cathedrals > 0 && (
+                    <>
+                      {' '}
+                      <PixelIcon name="church" title="Kathedralen" />×{p.cathedrals}
+                    </>
+                  )}
                 </td>
                 <td className="num">{n(p.army)}</td>
                 <td className="num">{n(p.score)}</td>
@@ -179,7 +185,7 @@ function ReichstagTab() {
                 <tr key={i}>
                   <td>{i + 1}</td>
                   <td>
-                    {seat.kind === 'bishop' ? '⛪ ' : '👑 '}
+                    <PixelIcon name={seat.kind === 'bishop' ? 'church' : 'throne'} />{' '}
                     {seatLabel(state, seat)}
                   </td>
                   {isCandidate && (

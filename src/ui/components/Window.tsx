@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { PixelIcon, type IconName } from '../icons';
 
 interface WindowProps {
   title: string;
-  icon?: string;
+  icon?: IconName;
   x: number;
   y: number;
   width?: number;
@@ -48,7 +49,7 @@ export function Window({ title, icon, x, y, width = 420, z, active, onFocus, onC
       aria-label={title}
     >
       <div className="titlebar" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
-        {icon && <span aria-hidden>{icon}</span>}
+        {icon && <PixelIcon name={icon} />}
         <span className="title">{title}</span>
         {onMinimize && (
           <button className="btn tb-btn" onClick={onMinimize} aria-label="Minimieren">
@@ -71,7 +72,7 @@ export function Window({ title, icon, x, y, width = 420, z, active, onFocus, onC
 
 interface ModalProps {
   title: string;
-  icon?: string;
+  icon?: IconName;
   width?: number;
   children: ReactNode;
   onClose?: () => void;
@@ -84,7 +85,7 @@ export function Modal({ title, icon, width = 380, children, onClose, opaque }: M
     <div className={`overlay ${opaque ? 'opaque' : ''}`}>
       <div className="window raised modal-window" style={{ width }} role="alertdialog" aria-label={title}>
         <div className="titlebar">
-          {icon && <span aria-hidden>{icon}</span>}
+          {icon && <PixelIcon name={icon} />}
           <span className="title">{title}</span>
           {onClose && (
             <button className="btn tb-btn" onClick={onClose} aria-label="Schließen">
@@ -98,7 +99,7 @@ export function Modal({ title, icon, width = 380, children, onClose, opaque }: M
   );
 }
 
-const SEVERITY_ICON = { info: 'ℹ️', good: '📜', warning: '⚠️', error: '⛔' } as const;
+export const SEVERITY_ICON = { info: 'info', good: 'scroll', warning: 'warning', error: 'error' } as const satisfies Record<string, IconName>;
 
 interface AlertProps {
   title: string;
@@ -116,8 +117,8 @@ export function Alert({ title, text, severity = 'info', onOk, extra, counter }: 
   return (
     <Modal title={title} width={440}>
       <div className="alert-body">
-        <div className="alert-icon" aria-hidden>
-          {SEVERITY_ICON[severity]}
+        <div className="alert-icon">
+          <PixelIcon name={SEVERITY_ICON[severity]} size={32} />
         </div>
         <div className="alert-text">{text}</div>
       </div>

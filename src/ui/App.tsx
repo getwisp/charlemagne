@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActionError, newGame, type GameState, type PlayerSetup } from '../engine';
+import { TooltipLayer } from './components/Tooltip';
 import { Alert } from './components/Window';
 import { GameContext } from './context';
 import { Desktop } from './Desktop';
@@ -107,6 +108,7 @@ export function App() {
     <>
       {content}
       {error && <Alert title="Kaiser-Klon" text={error} severity="error" onOk={() => setError(null)} />}
+      <TooltipLayer />
     </>
   );
 }

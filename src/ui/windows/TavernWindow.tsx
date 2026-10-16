@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { actions, COVERT, COVERT_MIN_GOLD, covertChance, TITLES, type CovertMission, type SabotageTarget } from '../../engine';
 import { GroupBox, n, NumberField } from '../components/controls';
 import { useGame } from '../context';
+import { PixelIcon } from '../icons';
 
 const MISSIONS: CovertMission[] = ['spy', 'rob', 'sabotage', 'assassinate'];
 const SABOTAGE: Record<SabotageTarget, string> = { mill: 'Mühle', market: 'Markt', grain: 'Kornspeicher' };
@@ -31,7 +32,7 @@ export function TavernWindow() {
   return (
     <div>
       <div className="sunken field" style={{ padding: 6 }}>
-        🍺 Der Wirt beugt sich vor: „Für den rechten Preis findet sich für jede Arbeit ein Mann…“ Aufträge werden verdeckt zum Jahreswechsel ausgeführt.
+        <PixelIcon name="tavern" /> Der Wirt beugt sich vor: „Für den rechten Preis findet sich für jede Arbeit ein Mann…“ Aufträge werden verdeckt zum Jahreswechsel ausgeführt.
       </div>
 
       <GroupBox label="Auftrag">

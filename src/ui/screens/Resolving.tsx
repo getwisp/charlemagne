@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ARCHETYPES, planAiTurn, resolveYear, type GameState } from '../../engine';
 import { Progress } from '../components/controls';
 import { Modal } from '../components/Window';
+import { PixelIcon } from '../icons';
 
 /**
  * Rundenwechsel: KI-Züge werden mit künstlicher Bedenkzeit (0,8–1,5 s) berechnet,
@@ -36,11 +37,9 @@ export function Resolving({ state, onDone }: { state: GameState; onDone: (s: Gam
   const total = ais.length + 1;
   const current = step < ais.length ? ais[step] : null;
   return (
-    <Modal title={`Das Jahr ${state.year} wird berechnet…`} icon="⏳" width={420} opaque>
+    <Modal title={`Das Jahr ${state.year} wird berechnet…`} icon="hourglass" width={420} opaque>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 10 }}>
-        <div style={{ fontSize: 34 }} aria-hidden>
-          {current ? '🤔' : '⚖️'}
-        </div>
+        <PixelIcon name={current ? 'hourglass' : 'market'} size={32} />
         <div>
           {current ? (
             <>

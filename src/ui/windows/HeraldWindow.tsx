@@ -1,7 +1,8 @@
 import type { HeraldMessage } from '../../engine';
 import { useGame } from '../context';
+import { SEVERITY_ICON } from '../components/Window';
+import { PixelIcon } from '../icons';
 
-const ICON = { info: 'ℹ️', good: '📜', warning: '⚠️', error: '⛔' } as const;
 
 export function HeraldWindow({ read }: { read: HeraldMessage[] }) {
   const { me } = useGame();
@@ -21,7 +22,7 @@ export function HeraldWindow({ read }: { read: HeraldMessage[] }) {
         {read.map((m) => (
           <div key={m.id} style={{ marginBottom: 6 }}>
             <div>
-              {ICON[m.severity]} <b>{m.title}</b>
+              <PixelIcon name={SEVERITY_ICON[m.severity]} /> <b>{m.title}</b>
             </div>
             <div style={{ whiteSpace: 'pre-wrap', paddingLeft: 22 }}>{m.text}</div>
           </div>

@@ -1,0 +1,247 @@
+/* Win95-Bedienelemente: Scrollbalken, Häkchen, Optionsfelder, Auswahllisten,
+   Schieberegler und Zahlenfelder im Stil von Windows 95. Die Pixelgrafiken
+   stammen aus win95-vars.css. */
+
+/* ------------------------------------------------------------------ Scrollbalken */
+/* Chrome, Edge, Safari */
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--img-checker);
+  background-size: 2px 2px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--face);
+  border: 1px solid;
+  border-color: var(--hilight) var(--dark) var(--dark) var(--hilight);
+  box-shadow: inset 1px 1px var(--light), inset -1px -1px var(--shadow);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--face);
+}
+
+::-webkit-scrollbar-button:single-button {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background-color: var(--face);
+  background-repeat: no-repeat;
+}
+
+::-webkit-scrollbar-button:single-button:vertical:decrement {
+  background-image: var(--img-arrow-up);
+}
+
+::-webkit-scrollbar-button:single-button:vertical:increment {
+  background-image: var(--img-arrow-down);
+}
+
+::-webkit-scrollbar-button:single-button:horizontal:decrement {
+  background-image: var(--img-arrow-left);
+}
+
+::-webkit-scrollbar-button:single-button:horizontal:increment {
+  background-image: var(--img-arrow-right);
+}
+
+/* Firefox kennt die Pseudo-Elemente nicht – dort wenigstens die Farben. Chrome
+   ignoriert die WebKit-Regeln, sobald scrollbar-color gesetzt ist, daher nur hier. */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-color: var(--face) var(--hilight);
+  }
+}
+
+/* ------------------------------------------------------------------ Häkchen */
+input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  flex-shrink: 0;
+  background: var(--light) no-repeat center;
+  border: 1px solid;
+  border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+  box-shadow: inset 1px 1px var(--dark), inset -1px -1px var(--hilight);
+  cursor: pointer;
+}
+
+input[type='checkbox']:checked {
+  background-image: var(--img-check);
+}
+
+input[type='checkbox']:disabled {
+  background-color: var(--face);
+  cursor: default;
+}
+
+/* Anzeige-Häkchen (nicht anklickbar), z. B. für erfüllte Titel-Voraussetzungen */
+.w95-check {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  vertical-align: -2px;
+  background: var(--light) no-repeat center;
+  border: 1px solid;
+  border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+  box-shadow: inset 1px 1px var(--dark), inset -1px -1px var(--hilight);
+}
+
+.w95-check.on {
+  background-image: var(--img-check);
+}
+
+/* ------------------------------------------------------------------ Optionsfelder */
+input[type='radio'] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 0;
+  background: var(--img-radio) no-repeat;
+  cursor: pointer;
+}
+
+input[type='radio']:checked {
+  background-image: var(--img-radio-on);
+}
+
+input[type='radio']:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+input[type='checkbox']:focus-visible,
+input[type='radio']:focus-visible {
+  outline: 1px dotted var(--dark);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ Auswahllisten */
+select.input,
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 21px;
+  padding: 1px 20px 1px 3px;
+  background: var(--img-select-btn) no-repeat right 2px center, var(--light);
+  border: 1px solid;
+  border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+  box-shadow: inset 1px 1px var(--dark), inset -1px -1px var(--hilight);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+select:focus-visible {
+  outline: none;
+  background-color: var(--light);
+}
+
+select:disabled {
+  color: var(--shadow);
+  background-color: var(--face);
+}
+
+/* ------------------------------------------------------------------ Zahlenfelder */
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.input,
+select {
+  border-radius: 0;
+}
+
+/* ------------------------------------------------------------------ Schieberegler */
+input[type='range'] {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 22px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--light);
+  border: 1px solid;
+  border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+  box-shadow: inset 1px 1px var(--dark);
+}
+
+input[type='range']::-moz-range-track {
+  height: 2px;
+  background: var(--light);
+  border: 1px solid;
+  border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+}
+
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px;
+  height: 21px;
+  margin-top: -10px;
+  background: var(--face);
+  border: 1px solid;
+  border-color: var(--light) var(--dark) var(--dark) var(--light);
+  box-shadow: inset -1px -1px var(--shadow), inset 1px 1px var(--hilight);
+  border-radius: 0;
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 9px;
+  height: 19px;
+  background: var(--face);
+  border: 1px solid;
+  border-color: var(--light) var(--dark) var(--dark) var(--light);
+  box-shadow: inset -1px -1px var(--shadow), inset 1px 1px var(--hilight);
+  border-radius: 0;
+}
+
+input[type='range']:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+input[type='range']:focus-visible {
+  outline: 1px dotted var(--dark);
+  outline-offset: 1px;
+}
+
+/* ------------------------------------------------------------------ Tooltips */
+.w95-tooltip {
+  position: fixed;
+  z-index: 10000;
+  max-width: 320px;
+  padding: 2px 4px;
+  background: #ffffe1;
+  color: #000;
+  border: 1px solid #000;
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  white-space: pre-wrap;
+  line-height: 1.3;
+}
+
+/* ------------------------------------------------------------------ Pixel-Symbole */
+.pixel-icon {
+  flex-shrink: 0;
+  vertical-align: -3px;
+  image-rendering: pixelated;
+}

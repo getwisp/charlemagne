@@ -2,16 +2,15 @@ import { rankPlayers, score, TITLES, type GameState } from '../../engine';
 import { GroupBox, n } from '../components/controls';
 import { Modal } from '../components/Window';
 import { clearAutosave, downloadSave } from '../storage';
+import { PixelIcon } from '../icons';
 
 export function GameOver({ state, onNewGame }: { state: GameState; onNewGame: () => void }) {
   const ranking = rankPlayers(state);
   const winner = state.players.find((p) => p.id === state.winnerId);
   return (
-    <Modal title="Spielende" icon="👑" width={560} opaque>
+    <Modal title="Spielende" icon="throne" width={560} opaque>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        <div style={{ fontSize: 44 }} aria-hidden>
-          {winner?.title === 8 ? '👑' : '📜'}
-        </div>
+        <PixelIcon name={winner?.title === 8 ? 'throne' : 'scroll'} size={48} />
         <div>
           <div style={{ fontSize: 15, fontWeight: 'bold' }}>{winner ? `${winner.name} triumphiert!` : 'Das Spiel ist vorbei.'}</div>
           <div className="hint">{state.endReason}</div>

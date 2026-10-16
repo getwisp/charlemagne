@@ -1,6 +1,7 @@
 import { actions, calculateEconomyTurn, grainBuyCost, granaryProtection, grainNeed, RAT_MAX, RAT_MIN } from '../../engine';
 import { GroupBox, n } from '../components/controls';
 import { useGame } from '../context';
+import { PixelIcon } from '../icons';
 
 export function GranaryWindow() {
   const { state, me, act, canAct } = useGame();
@@ -62,7 +63,7 @@ export function GranaryWindow() {
         </div>
         {missing > 0 ? (
           <div className="sunken" style={{ background: '#ffffe1', padding: 6, marginTop: 4 }}>
-            ⚠️ Für {me.ration} % fehlen <b>{n(missing)} Scheffel</b> – ausgegeben werden nur {n(preview.grainDistributed)}.
+            <PixelIcon name="warning" /> Für {me.ration} % fehlen <b>{n(missing)} Scheffel</b> – ausgegeben werden nur {n(preview.grainDistributed)}.
             <div className="btn-row" style={{ marginTop: 4 }}>
               <button
                 className="btn small"

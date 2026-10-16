@@ -56,3 +56,8 @@ src/ui/       React-Oberfläche im Win95-Stil
 
 Spielstände werden automatisch im Browser gesichert und lassen sich über das Startmenü als Datei
 speichern/laden – so funktioniert auch asynchroner Mehrspieler per Dateiaustausch.
+
+## Lizenzen von Drittanbietern
+
+- Schrift **WIN95FA** von Alina Sava (SIL Open Font License 1.1), eingebunden über `@fontsource/win95fa`. Der Lizenztext liegt unter `public/licenses/WIN95FA-OFL.txt` und wird mit ausgeliefert.
+- Alle Symbole und Bedienelement-Grafiken sind eigene Pixelgrafiken (`src/ui/icons.tsx`, `scripts/gen-win95-controls.py`).
