@@ -83,3 +83,60 @@ describe('KI-Simulation', () => {
     }
   });
 });
+
+// Robustheit über verschiedene Aufstellungen: SIM_SETUPS=60 npx vitest run tests/simulation.test.ts -t Aufstellungen
+describe('Aufstellungen', () => {
+  it.runIf(process.env.SIM_SETUPS)('verschiedene Spielerzahlen und Mischungen', () => {
+    const seeds = Number(process.env.SIM_SETUPS) || 30;
+    type A = 'pfeffersack' | 'kriegstreiber' | 'raenkeschmiedin' | 'kirchenfuerst';
+    const P: A = 'pfeffersack', K: A = 'kriegstreiber', R: A = 'raenkeschmiedin', C: A = 'kirchenfuerst';
+    const short: Record<A, string> = { pfeffersack: 'Pf', kriegstreiber: 'Kr', raenkeschmiedin: 'Rä', kirchenfuerst: 'Ki' };
+    const setups: { name: string; seats: A[] }[] = [
+      { name: '1 Spieler (Pf)', seats: [P] },
+      { name: '2: Pf+Kr', seats: [P, K] },
+      { name: '2: Pf+Rä', seats: [P, R] },
+      { name: '2: Pf+Ki', seats: [P, C] },
+      { name: '2: Kr+Rä', seats: [K, R] },
+      { name: '2: Kr+Ki', seats: [K, C] },
+      { name: '2: Rä+Ki', seats: [R, C] },
+      { name: '3: ohne Pf', seats: [K, R, C] },
+      { name: '3: ohne Kr', seats: [P, R, C] },
+      { name: '4: Standard', seats: [P, K, R, C] },
+      { name: '4: 4× Kr', seats: [K, K, K, K] },
+      { name: '4: 4× Pf', seats: [P, P, P, P] },
+      { name: '6: je 1–2', seats: [P, K, R, C, P, K] },
+      { name: '9: je 2–3', seats: [P, K, R, C, P, K, R, C, P] },
+    ];
+    console.log(`\n${seeds} Seeds je Aufstellung; Sitzordnung rotiert mit dem Seed. Siegquote je Sitz relativ zum Erwartungswert (1,00 = fair).`);
+    console.log('Aufstellung       Ø Jahre  Kaiser  Zeitende  Reichstage  Wortbr.  Schuldturm | Siegquote je Archetyp');
+    for (const setup of setups) {
+      const wins: Record<string, number> = {};
+      const seatsOf: Record<string, number> = {};
+      let years = 0, kaiser = 0, timeout = 0, elections = 0, breaches = 0, prison = 0;
+      for (let seed = 1; seed <= seeds; seed++) {
+        const rot = seed % setup.seats.length;
+        const seats = [...setup.seats.slice(rot), ...setup.seats.slice(0, rot)];
+        let s = newGame({ seed, endYear: 1820, players: seats.map((a, i) => ({ name: `${short[a]}${i + 1}`, isAI: true, archetype: a })) });
+        while (s.phase === 'orders') {
+          for (const p of s.players) s = planAiTurn(s, p.id);
+          for (const p of s.players) if (p.debtorPrison > 0) prison++;
+          s = resolveYear(s);
+        }
+        years += s.year - 1700;
+        const w = s.players.find((p) => p.id === s.winnerId)!;
+        if (w.title === 8) kaiser++;
+        else timeout++;
+        elections += s.chronicle.filter((c) => c.text.startsWith('Der Reichstag wird einberufen')).length;
+        breaches += s.chronicle.filter((c) => c.text.startsWith('Wortbruch')).length;
+        wins[w.archetype!] = (wins[w.archetype!] ?? 0) + 1;
+        for (const a of seats) seatsOf[a] = (seatsOf[a] ?? 0) + 1;
+      }
+      const quota = (Object.keys(seatsOf) as A[])
+        .map((a) => `${short[a]} ${(((wins[a] ?? 0) / seeds) / (seatsOf[a] / seeds / setup.seats.length)).toFixed(2)}`)
+        .join('  ');
+      console.log(
+        `${setup.name.padEnd(17)} ${(years / seeds).toFixed(0).padStart(7)} ${((100 * kaiser) / seeds).toFixed(0).padStart(6)} % ${((100 * timeout) / seeds).toFixed(0).padStart(6)} % ${(elections / seeds).toFixed(1).padStart(10)} ${(breaches / seeds).toFixed(2).padStart(8)} ${(prison / seeds).toFixed(1).padStart(10)}  | ${quota}`,
+      );
+    }
+  });
+});
