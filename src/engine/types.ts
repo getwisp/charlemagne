@@ -56,6 +56,8 @@ export interface HistoryEntry {
   land: number;
   grain: number;
   title: number;
+  /** Bargeld ohne Sparkonto (fehlt in älteren Spielständen) */
+  cash?: number;
 }
 
 export type Weather = 'Dürre' | 'Missernte' | 'Mäßig' | 'Normal' | 'Gut' | 'Prächtig';

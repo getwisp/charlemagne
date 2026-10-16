@@ -12,6 +12,8 @@ import {
   TITLES,
   type GameState,
   type HeraldMessage,
+  type HistoryEntry,
+  type Severity,
 } from '../engine';
 import { BossScreen } from './BossScreen';
 import { n } from './components/controls';
@@ -86,7 +88,7 @@ interface DesktopProps {
 
 export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopProps) {
   const { state, me, canAct } = useGame();
-  const [open, setOpen] = useState<OpenWin[]>([]);
+  const [open, setOpen] = useState<OpenWin[]>(() => loadLayout(state.id, me.id));
   const [zTop, setZTop] = useState(10);
   const [startOpen, setStartOpen] = useState(false);
   const [boss, setBoss] = useState(false);
@@ -98,9 +100,17 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
   const unread = state.messages[me.id] ?? [];
   const preview = useMemo(() => calculateEconomyTurn(me, state.market), [me, state.market]);
 
-  // Neuer Spieler/neues Jahr → Fenster zurücksetzen, gelesene Meldungen leeren
+  // Fensterlayout bleibt pro Spieler erhalten (Jahreswechsel, Hot-Seat, Neuladen).
   useEffect(() => {
-    setOpen([]);
+    setOpen(loadLayout(state.id, me.id));
+  }, [state.id, me.id]);
+  useEffect(() => saveLayout(state.id, me.id, open), [state.id, me.id, open]);
+  useEffect(() => {
+    setZTop((z) => Math.max(z, ...open.map((w) => w.z)));
+  }, [open]);
+
+  // Neues Jahr → Herold-Archiv leeren
+  useEffect(() => {
     setReadThisTurn([]);
   }, [me.id, state.year]);
 
@@ -153,12 +163,20 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
   const move = (id: WinId, x: number, y: number) => setOpen((ws) => ws.map((w) => (w.id === id ? { ...w, x, y } : w)));
   const activeId = open.filter((w) => !w.minimized).sort((a, b) => b.z - a.z)[0]?.id;
 
-  function markRead(all: boolean) {
-    const [first, ...rest] = unread;
-    if (!first) return;
-    setReadThisTurn((r) => [...r, ...(all ? unread : [first])]);
-    setRaw({ ...state, messages: { ...state.messages, [me.id]: all ? [] : rest } });
+  function markAllRead() {
+    if (unread.length === 0) return;
+    setReadThisTurn((r) => [...r, ...unread]);
+    setRaw({ ...state, messages: { ...state.messages, [me.id]: [] } });
   }
+
+  // Veränderung im letzten Jahr (Jahresende gegen Jahresende davor)
+  const [prevYear, lastYear] = me.history.slice(-2);
+  const delta = (pick: (h: HistoryEntry) => number | undefined): number | undefined => {
+    if (!prevYear || !lastYear) return undefined;
+    const a = pick(prevYear);
+    const b = pick(lastYear);
+    return a === undefined || b === undefined ? undefined : b - a;
+  };
 
   function endTurn() {
     setConfirmEnd(false);
@@ -201,10 +219,10 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
               ⛓️ Ihr seid im <b>{blocked}</b> und könnt dieses Jahr nichts befehlen.
             </div>
           )}
-          <Stat label="💰 Gold" value={`${n(me.gold)}`} neg={me.gold < 0} />
+          <Stat label="💰 Gold" value={`${n(me.gold)}`} neg={me.gold < 0} delta={delta((h) => h.cash)} />
           <Stat label="🏦 Sparkonto" value={n(me.savings)} />
-          <Stat label="🌾 Korn" value={`${n(me.grain)} Sch.`} />
-          <Stat label="🗺️ Land" value={`${n(me.land)} ha`} title="Gesamtland = bebautes Land + Lehnsland + freies Ackerland" />
+          <Stat label="🌾 Korn" value={`${n(me.grain)} Sch.`} delta={delta((h) => h.grain)} />
+          <Stat label="🗺️ Land" value={`${n(me.land)} ha`} delta={delta((h) => h.land)} title="Gesamtland = bebautes Land + Lehnsland + freies Ackerland" />
           <Stat
             label="🌱 Freies Ackerland"
             value={`${n(freeLand(me))} ha`}
@@ -217,7 +235,7 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
           <div className="hint" style={{ margin: '-2px 4px 0' }}>
             bebaut {n(builtLand(me))} · Lehen {n(fiefLand(me))}
           </div>
-          <Stat label="👥 Bürger" value={n(me.population)} />
+          <Stat label="👥 Bürger" value={n(me.population)} delta={delta((h) => h.population)} />
           <Stat label="🏘️ Städte" value={`${cityCount(me.buildings)}`} />
           <Stat label="🛡️ Garde / Heer" value={`${n(me.military.guards)} / ${n(me.military.mercenaries + me.military.cannons + me.military.squires + me.military.knights)}`} />
           <hr className="etched" />
@@ -348,22 +366,7 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
       )}
 
       {/* ------------------------------------------------------- Dialoge */}
-      {unread.length > 0 && !boss && (
-        <Alert
-          title={`Herold – ${unread[0].title}`}
-          text={unread[0].text}
-          severity={unread[0].severity}
-          onOk={() => markRead(false)}
-          counter={unread.length > 1 ? `Meldung 1 von ${unread.length}` : undefined}
-          extra={
-            unread.length > 1 ? (
-              <button className="btn" onClick={() => markRead(true)}>
-                Alle schließen
-              </button>
-            ) : undefined
-          }
-        />
-      )}
+      {unread.length > 0 && !boss && <HeraldReport year={state.year} messages={unread} onOk={markAllRead} />}
 
       {confirmEnd && (
         <Modal title="Zug beenden" icon="❔" width={420} onClose={() => setConfirmEnd(false)}>
@@ -427,11 +430,67 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
   );
 }
 
-function Stat({ label, value, neg, warn, title }: { label: string; value: string; neg?: boolean; warn?: boolean; title?: string }) {
+const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, good: 2, info: 3 };
+const SEVERITY_ICON: Record<Severity, string> = { error: '⛔', warning: '⚠️', good: '📜', info: 'ℹ️' };
+
+/** Jahresbericht des Herolds: alle Meldungen in einer Box, Wichtiges zuerst. */
+function HeraldReport({ year, messages, onOk }: { year: number; messages: HeraldMessage[]; onOk: () => void }) {
+  const sorted = [...messages].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+  const worst = sorted[0].severity;
   return (
-    <div className="stat sunken" title={title}>
+    <Modal title={`Herold – Anno ${year}`} icon="📯" width={500}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '4px 4px 8px' }}>
+        <div className="alert-icon" aria-hidden>
+          {SEVERITY_ICON[worst]}
+        </div>
+        <div>
+          Der Herold verkündet {messages.length === 1 ? 'eine Meldung' : `${messages.length} Meldungen`} zum Jahreswechsel.
+        </div>
+      </div>
+      <div className="sunken field" style={{ maxHeight: '55vh', overflow: 'auto', padding: 6, userSelect: 'text' }}>
+        {sorted.map((m) => (
+          <div key={m.id} className={`herald-item herald-${m.severity}`}>
+            <div>
+              <span aria-hidden>{SEVERITY_ICON[m.severity]}</span> <b>{m.title}</b>
+            </div>
+            <div style={{ whiteSpace: 'pre-wrap', paddingLeft: 22 }}>{m.text}</div>
+          </div>
+        ))}
+      </div>
+      <div className="btn-row" style={{ justifyContent: 'center' }}>
+        <button className="btn primary" onClick={onOk} autoFocus>
+          OK
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  neg,
+  warn,
+  title,
+  delta,
+}: {
+  label: string;
+  value: string;
+  neg?: boolean;
+  warn?: boolean;
+  title?: string;
+  /** Veränderung im letzten Jahr */
+  delta?: number;
+}) {
+  const d = delta !== undefined ? Math.round(delta) : 0;
+  const deltaTitle = d !== 0 ? `Im letzten Jahr: ${d > 0 ? '+' : ''}${n(d)}` : undefined;
+  return (
+    <div className="stat sunken" title={[title, deltaTitle].filter(Boolean).join(' – ') || undefined}>
       <span className="label">{label}</span>
-      <span className={`value ${neg ? 'neg' : warn ? 'warn' : ''}`}>{value}</span>
+      <span className={`value ${neg ? 'neg' : warn ? 'warn' : ''}`}>
+        {d !== 0 && <span className={`delta ${d > 0 ? 'pos' : 'neg'}`}>{d > 0 ? '▲' : '▼'}</span>}
+        {value}
+      </span>
     </div>
   );
 }
@@ -447,4 +506,30 @@ function MenuItem({ icon, label, onClick }: { icon: string; label: string; onCli
       </button>
     </li>
   );
+}
+
+// ------------------------------------------------------------ Fensterlayout pro Spieler
+const LAYOUT_KEY = (gameId: string, playerId: string) => `kaiser-klon/layout/${gameId}/${playerId}`;
+
+function loadLayout(gameId: string, playerId: string): OpenWin[] {
+  try {
+    const raw = localStorage.getItem(LAYOUT_KEY(gameId, playerId));
+    const parsed = raw ? (JSON.parse(raw) as OpenWin[]) : [];
+    const maxX = Math.max(0, window.innerWidth - 120);
+    const maxY = Math.max(0, window.innerHeight - 120);
+    // Nur bekannte Fenster, und nie außerhalb des sichtbaren Bereichs
+    return parsed
+      .filter((w) => w && w.id in WINDOWS)
+      .map((w) => ({ ...w, x: Math.min(Math.max(0, w.x), maxX), y: Math.min(Math.max(0, w.y), maxY) }));
+  } catch {
+    return [];
+  }
+}
+
+function saveLayout(gameId: string, playerId: string, open: OpenWin[]): void {
+  try {
+    localStorage.setItem(LAYOUT_KEY(gameId, playerId), JSON.stringify(open));
+  } catch {
+    // Kein Speicher verfügbar – Layout gilt dann nur für diese Sitzung.
+  }
 }

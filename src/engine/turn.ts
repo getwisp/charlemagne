@@ -114,7 +114,7 @@ export function newGame(opts: NewGameOptions): GameState {
 }
 
 function recordHistory(s: GameState, p: Player): void {
-  p.history.push({ year: s.year, population: p.population, gold: p.gold + p.savings, land: p.land, grain: p.grain, title: p.title });
+  p.history.push({ year: s.year, population: p.population, gold: p.gold + p.savings, cash: p.gold, land: p.land, grain: p.grain, title: p.title });
   if (p.history.length > 50) p.history.splice(0, p.history.length - 50);
 }
 

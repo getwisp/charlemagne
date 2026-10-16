@@ -781,3 +781,32 @@ table.kv tr.sum td {
   margin-bottom: 6px;
   flex-wrap: wrap;
 }
+
+/* ------------------------------------------------------------------ Herold & Trends */
+.herald-item {
+  padding: 4px 2px 6px;
+  border-bottom: 1px dotted #c8c8c8;
+  line-height: 1.4;
+}
+
+.herald-item:last-child {
+  border-bottom: 0;
+}
+
+.herald-error b {
+  color: var(--bad);
+}
+
+.herald-warning b {
+  color: var(--warn);
+}
+
+.herald-good b {
+  color: var(--good);
+}
+
+.stat .delta {
+  font-size: 9px;
+  margin-right: 4px;
+  vertical-align: 1px;
+}
