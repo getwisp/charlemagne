@@ -33,6 +33,7 @@ import {
   resolveYear,
   T,
   concludeTreaty,
+  aiVote,
   treatiesBetween,
   TRADE_TREATY_BONUS,
   type GameState,
@@ -521,6 +522,14 @@ describe('Titel', () => {
 });
 
 describe('Reichstag', () => {
+  it('KI-Kurfürst enthält sich, wenn der Groll alles überwiegt', () => {
+    const s = game(2);
+    const [cand, voter] = s.players;
+    voter.grudges[cand.id] = 100;
+    expect(aiVote(voter, 0, [cand], [])).toBeNull();
+    expect(aiVote(voter, 0, [cand], [{ kind: 'bribe', id: 'b', from: cand.id, seat: 0, gold: 20000 }])).toBe(cand.id);
+  });
+
   function electionGame(): GameState {
     const s = game(3);
     const k = s.players[0];

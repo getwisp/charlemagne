@@ -144,10 +144,14 @@ export function resolveElection(s: GameState): ElectionResult | null {
   return result;
 }
 
-/** KI-Kurfürsten wählen nach Schmiergeld und Groll. */
-function aiVote(voter: Player, seatIdx: number, candidates: Player[], bribes: BribeAction[]): string {
+/**
+ * KI-Kurfürsten wählen nach Schmiergeld, Frömmigkeit und Groll. Wiegt der Groll
+ * schwerer als alles, was ein Kandidat bietet, enthalten sie sich – wer einen
+ * überfallen hat, bekommt die Stimme nicht schon deshalb, weil er allein antritt.
+ */
+export function aiVote(voter: Player, seatIdx: number, candidates: Player[], bribes: BribeAction[]): string | null {
   const scored = candidates
     .map((c) => ({ c, v: bribesFor(bribes, seatIdx, c.id) - (voter.grudges[c.id] ?? 0) * 150 + piety(c) * 200 }))
     .sort((a, b) => b.v - a.v);
-  return scored[0].c.id;
+  return scored[0].v >= 0 ? scored[0].c.id : null;
 }
