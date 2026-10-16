@@ -6,7 +6,9 @@ import {
   fiefLand,
   freeLand,
   builtLand,
+  expectedHarvest,
   grainNeed,
+  HECTARES_PER_BUILDING,
   TITLES,
   type GameState,
   type HeraldMessage,
@@ -202,9 +204,18 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
           <Stat label="💰 Gold" value={`${n(me.gold)}`} neg={me.gold < 0} />
           <Stat label="🏦 Sparkonto" value={n(me.savings)} />
           <Stat label="🌾 Korn" value={`${n(me.grain)} Sch.`} />
-          <Stat label="🗺️ Land" value={`${n(me.land)} ha`} />
-          <div className="hint" style={{ margin: '0 4px' }}>
-            bebaut {n(builtLand(me))} · Lehen {n(fiefLand(me))} · frei {n(freeLand(me))}
+          <Stat label="🗺️ Land" value={`${n(me.land)} ha`} title="Gesamtland = bebautes Land + Lehnsland + freies Ackerland" />
+          <Stat
+            label="🌱 Freies Ackerland"
+            value={`${n(freeLand(me))} ha`}
+            warn={freeLand(me) < HECTARES_PER_BUILDING}
+            title={
+              `Reicht für ${Math.floor(freeLand(me) / HECTARES_PER_BUILDING)} Gebäude (je ${n(HECTARES_PER_BUILDING)} ha). ` +
+              `Bei normalem Wetter deckt die Ernte ~${grainNeed(me) > 0 ? Math.round((expectedHarvest(me, 1) / grainNeed(me)) * 100) : 100} % des Kornbedarfs.`
+            }
+          />
+          <div className="hint" style={{ margin: '-2px 4px 0' }}>
+            bebaut {n(builtLand(me))} · Lehen {n(fiefLand(me))}
           </div>
           <Stat label="👥 Bürger" value={n(me.population)} />
           <Stat label="🏘️ Städte" value={`${cityCount(me.buildings)}`} />
@@ -416,11 +427,11 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
   );
 }
 
-function Stat({ label, value, neg }: { label: string; value: string; neg?: boolean }) {
+function Stat({ label, value, neg, warn, title }: { label: string; value: string; neg?: boolean; warn?: boolean; title?: string }) {
   return (
-    <div className="stat sunken">
+    <div className="stat sunken" title={title}>
       <span className="label">{label}</span>
-      <span className={`value ${neg ? 'neg' : ''}`}>{value}</span>
+      <span className={`value ${neg ? 'neg' : warn ? 'warn' : ''}`}>{value}</span>
     </div>
   );
 }
