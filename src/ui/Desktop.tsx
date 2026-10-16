@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ComponentType } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ComponentType } from 'react';
 import {
   actions,
   previewEconomy,
@@ -17,7 +17,11 @@ import {
 } from '../engine';
 import { BossScreen } from './BossScreen';
 import { n } from './components/controls';
+import { ContextMenu, type MenuEntry } from './components/Menu';
 import { Alert, Modal, SEVERITY_ICON, Window } from './components/Window';
+import { DisplayProperties } from './DisplayProperties';
+import { StartMenu } from './StartMenu';
+import { zoomFromTask, zoomToTask } from './zoom';
 import { PixelIcon, type IconName } from './icons';
 import { useGame } from './context';
 import { downloadSave, pickSaveFile } from './storage';
@@ -77,6 +81,7 @@ interface OpenWin {
   y: number;
   z: number;
   minimized: boolean;
+  maximized?: boolean;
 }
 
 interface DesktopProps {
@@ -97,6 +102,11 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
   const [confirmReset, setConfirmReset] = useState(false);
   const [readThisTurn, setReadThisTurn] = useState<HeraldMessage[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectedIcon, setSelectedIcon] = useState<WinId | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; kind: 'desktop' | 'taskbar' } | null>(null);
+  const [displayProps, setDisplayProps] = useState(false);
+  const [confirmQuit, setConfirmQuit] = useState(false);
+  const clock = useClock();
 
   const unread = state.messages[me.id] ?? [];
   const preview = useMemo(() => previewEconomy(state, me), [me, state]);
@@ -136,7 +146,10 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
     setZTop(z);
     setOpen((ws) => {
       const existing = ws.find((w) => w.id === id);
-      if (existing) return ws.map((w) => (w.id === id ? { ...w, z, minimized: false } : w));
+      if (existing) {
+        if (existing.minimized) zoomFromTask(id);
+        return ws.map((w) => (w.id === id ? { ...w, z, minimized: false } : w));
+      }
       const narrow = window.innerWidth < 700;
       if (narrow) return [...ws, { id, x: 2, y: 2, z, minimized: false }];
       // Neben die offenen Fenster stellen, damit nichts verdeckt wird; erst wenn kein Platz ist, kaskadieren.
@@ -160,7 +173,72 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
     setOpen((ws) => ws.map((w) => (w.id === id ? { ...w, z } : w)));
   };
   const close = (id: WinId) => setOpen((ws) => ws.filter((w) => w.id !== id));
-  const minimize = (id: WinId) => setOpen((ws) => ws.map((w) => (w.id === id ? { ...w, minimized: true } : w)));
+  const minimize = (id: WinId) => {
+    zoomToTask(id);
+    setOpen((ws) => ws.map((w) => (w.id === id ? { ...w, minimized: true } : w)));
+  };
+  const toggleMaximize = (id: WinId) => setOpen((ws) => ws.map((w) => (w.id === id ? { ...w, maximized: !w.maximized } : w)));
+  const closeMenu = useCallback(() => setMenu(null), []);
+
+  /** Linke Kante für Fenster: rechts neben den Desktop-Symbolen. */
+  function windowArea() {
+    const desk = document.querySelector('.desktop')?.getBoundingClientRect();
+    const iconsRight = (document.querySelector('.icons')?.getBoundingClientRect().right ?? 100) - (desk?.left ?? 0);
+    return { left: Math.round(iconsRight + 8), width: desk?.width ?? window.innerWidth, height: desk?.height ?? window.innerHeight };
+  }
+  // Neue Positionen außerhalb des State-Updaters berechnen: Updater müssen rein sein (StrictMode ruft sie doppelt auf).
+  function cascade() {
+    const { left } = windowArea();
+    const next = open.map((w, i) => ({ ...w, x: left + i * 24, y: 8 + i * 24, z: zTop + 1 + i, minimized: false, maximized: false }));
+    setZTop(zTop + open.length);
+    setOpen(next);
+  }
+  function tile() {
+    const { left, width } = windowArea();
+    let x = left;
+    let y = 8;
+    let rowHeight = 0;
+    const next = open.map((w) => {
+      const wWidth = WINDOWS[w.id].width;
+      if (x + wWidth > width && x > left) {
+        x = left;
+        y += rowHeight + 8;
+        rowHeight = 0;
+      }
+      const placed = { ...w, x, y, minimized: false, maximized: false };
+      x += wWidth + 8;
+      rowHeight = Math.max(rowHeight, document.querySelector<HTMLElement>(`[data-win="${w.id}"]`)?.offsetHeight ?? 300);
+      return placed;
+    });
+    setOpen(next);
+  }
+  function minimizeAll() {
+    setOpen((ws) => ws.map((w) => ({ ...w, minimized: true })));
+  }
+  const arrangeItems: MenuEntry[] = [
+    { label: 'Überlappend', onClick: cascade, disabled: open.length === 0 },
+    { label: 'Nebeneinander', onClick: tile, disabled: open.length === 0 },
+    { label: 'Alle Fenster minimieren', onClick: minimizeAll, disabled: open.every((w) => w.minimized) },
+  ];
+
+  function onIconKey(e: React.KeyboardEvent<HTMLDivElement>) {
+    const ids = (Object.keys(WINDOWS) as WinId[]).filter((id) => WINDOWS[id].desktop);
+    const cur = ids.indexOf(selectedIcon ?? ids[0]);
+    if (e.key === 'Enter' && selectedIcon) {
+      e.preventDefault();
+      openWindow(selectedIcon);
+      return;
+    }
+    // Spaltenweise angeordnet: hoch/runter = ±1, links/rechts = ± Symbole je Spalte
+    const buttons = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('.icon')];
+    const perColumn = Math.max(1, buttons.filter((b) => b.offsetLeft === buttons[0].offsetLeft).length);
+    const step = { ArrowDown: 1, ArrowUp: -1, ArrowRight: perColumn, ArrowLeft: -perColumn }[e.key];
+    if (step === undefined) return;
+    e.preventDefault();
+    const next = Math.min(ids.length - 1, Math.max(0, cur + step));
+    setSelectedIcon(ids[next]);
+    buttons[next]?.focus();
+  }
   const move = (id: WinId, x: number, y: number) => setOpen((ws) => ws.map((w) => (w.id === id ? { ...w, x, y } : w)));
   const activeId = open.filter((w) => !w.minimized).sort((a, b) => b.z - a.z)[0]?.id;
 
@@ -274,12 +352,34 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
       </aside>
 
       {/* ------------------------------------------------------- Desktop */}
-      <main className="desktop" aria-label="Desktop">
-        <div className="icons">
+      <main
+        className="desktop"
+        aria-label="Desktop"
+        onPointerDown={(e) => {
+          if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('icons')) setSelectedIcon(null);
+        }}
+        onContextMenu={(e) => {
+          if (e.target !== e.currentTarget && !(e.target as HTMLElement).classList.contains('icons')) return;
+          e.preventDefault();
+          setMenu({ x: e.clientX, y: e.clientY, kind: 'desktop' });
+        }}
+      >
+        <div className="icons" onKeyDown={onIconKey}>
           {(Object.keys(WINDOWS) as WinId[])
             .filter((id) => WINDOWS[id].desktop)
             .map((id) => (
-              <button key={id} className={`icon ${activeId === id ? 'selected' : ''}`} onClick={() => openWindow(id)}>
+              <button
+                key={id}
+                className={`icon ${selectedIcon === id ? 'selected' : ''}`}
+                onFocus={() => setSelectedIcon(id)}
+                // Maus: einfacher Klick markiert, Doppelklick öffnet. Finger und Stift öffnen mit einem Tipp.
+                onPointerUp={(e) => {
+                  if (e.pointerType !== 'mouse') openWindow(id);
+                }}
+                onClick={() => setSelectedIcon(id)}
+                onDoubleClick={() => openWindow(id)}
+                title="Doppelklick zum Öffnen"
+              >
                 <span className="glyph">
                   <PixelIcon name={WINDOWS[id].icon} size={32} />
                 </span>
@@ -301,10 +401,13 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
                 y={w.y}
                 z={w.z}
                 width={def.width}
+                winId={w.id}
+                maximized={w.maximized}
                 active={activeId === w.id}
                 onFocus={() => focus(w.id)}
                 onClose={() => close(w.id)}
                 onMinimize={() => minimize(w.id)}
+                onMaximize={() => toggleMaximize(w.id)}
                 onMove={(x, y) => move(w.id, x, y)}
               >
                 <C read={readThisTurn} />
@@ -314,7 +417,14 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
       </main>
 
       {/* ------------------------------------------------------- Taskleiste */}
-      <footer className="taskbar">
+      <footer
+        className="taskbar"
+        onContextMenu={(e) => {
+          if ((e.target as HTMLElement).closest('.start')) return;
+          e.preventDefault();
+          setMenu({ x: e.clientX, y: e.clientY, kind: 'taskbar' });
+        }}
+      >
         <button
           className={`btn start ${startOpen ? 'pressed' : ''}`}
           onPointerDown={(e) => e.stopPropagation()}
@@ -328,6 +438,7 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
           {open.map((w) => (
             <button
               key={w.id}
+              data-task={w.id}
               className={`btn ${activeId === w.id ? 'pressed' : ''}`}
               onClick={() => (activeId === w.id ? minimize(w.id) : openWindow(w.id))}
             >
@@ -339,35 +450,87 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
           <PixelIcon name="spreadsheet" /> Boss
         </button>
         <div className="tray sunken">
-          <span title={`${unread.length} ungelesene Meldung(en)`}>
+          <button className="tray-icon" onClick={() => openWindow('herald')} title={unread.length ? `${unread.length} ungelesene Meldung(en)` : 'Herold'}>
             <PixelIcon name="herald" />
-          </span>{' '}
-          Anno {state.year}
+            {unread.length > 0 && <span className="tray-badge">{unread.length}</span>}
+          </button>
+          <span title={clock.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}>
+            {clock.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+          <span className="tray-year">Anno {state.year}</span>
         </div>
       </footer>
 
       {startOpen && (
-        <div className="start-menu raised" role="menu" onPointerDown={(e) => e.stopPropagation()}>
-          <div className="stripe">Kaiser-Klon 98</div>
-          <ul>
-            <MenuItem icon="throne" label="Thronsaal" onClick={() => openWindow('throne')} />
-            <MenuItem icon="herald" label="Herold" onClick={() => openWindow('herald')} />
-            <MenuItem icon="chronicle" label="Reichschronik" onClick={() => openWindow('chronicle')} />
-            <li className="sep" />
-            <MenuItem
-              icon="disk"
-              label="Spielstand speichern…"
-              onClick={() => {
-                setStartOpen(false);
-                downloadSave(state);
-              }}
-            />
-            <MenuItem icon="folder" label="Spielstand laden…" onClick={load} />
-            <MenuItem icon="help" label="Hilfe" onClick={() => openWindow('help')} />
-            <li className="sep" />
-            <MenuItem icon="door" label="Hauptmenü" onClick={onQuit} />
-          </ul>
-        </div>
+        <StartMenu
+          onClose={() => setStartOpen(false)}
+          folders={[
+            {
+              key: 'programs',
+              label: 'Programme',
+              icon: 'folder',
+              items: (Object.keys(WINDOWS) as WinId[]).map((id) => ({ label: WINDOWS[id].title, icon: WINDOWS[id].icon, onClick: () => openWindow(id) })),
+            },
+            {
+              key: 'save',
+              label: 'Spielstand',
+              icon: 'disk',
+              items: [
+                { label: 'Speichern unter…', icon: 'disk', onClick: () => downloadSave(state) },
+                { label: 'Öffnen…', icon: 'folder', onClick: load },
+              ],
+            },
+            {
+              key: 'settings',
+              label: 'Einstellungen',
+              icon: 'settings',
+              items: [
+                { label: 'Anzeige…', icon: 'monitor', onClick: () => setDisplayProps(true) },
+                'sep',
+                ...arrangeItems,
+                { label: 'Fensterlayout zurücksetzen', onClick: () => setOpen([]) },
+              ],
+            },
+          ]}
+          items={[
+            { label: 'Hilfe', icon: 'help', onClick: () => openWindow('help') },
+            { label: 'Boss-Taste (F2)', icon: 'spreadsheet', onClick: () => setBoss(true) },
+            'sep',
+            { label: 'Beenden…', icon: 'door', onClick: () => setConfirmQuit(true) },
+          ]}
+        />
+      )}
+
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          onClose={closeMenu}
+          items={
+            menu.kind === 'desktop'
+              ? [...arrangeItems, 'sep', { label: 'Eigenschaften', icon: 'monitor', onClick: () => setDisplayProps(true) }]
+              : [...arrangeItems, 'sep', { label: 'Herold öffnen', icon: 'herald', onClick: () => openWindow('herald') }]
+          }
+        />
+      )}
+      {displayProps && <DisplayProperties onClose={() => setDisplayProps(false)} />}
+      {confirmQuit && (
+        <Modal title="Kaiser-Klon beenden" icon="door" width={380} onClose={() => setConfirmQuit(false)}>
+          <div className="alert-body">
+            <div className="alert-icon">
+              <PixelIcon name="castle" size={32} />
+            </div>
+            <div className="alert-text">Wollt Ihr zum Hauptmenü zurückkehren? Der Spielstand ist automatisch gesichert und kann dort fortgesetzt werden.</div>
+          </div>
+          <div className="btn-row">
+            <button className="btn primary" autoFocus onClick={onQuit}>
+              Ja
+            </button>
+            <button className="btn" onClick={() => setConfirmQuit(false)}>
+              Nein
+            </button>
+          </div>
+        </Modal>
       )}
 
       {/* ------------------------------------------------------- Dialoge */}
@@ -505,15 +668,14 @@ function Stat({
   );
 }
 
-function MenuItem({ icon, label, onClick }: { icon: IconName; label: string; onClick: () => void }) {
-  return (
-    <li role="none">
-      <button role="menuitem" onClick={onClick}>
-        <PixelIcon name={icon} size={24} />
-        {label}
-      </button>
-    </li>
-  );
+/** Uhrzeit für den Infobereich, minütlich aktualisiert. */
+function useClock(): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 15000);
+    return () => clearInterval(t);
+  }, []);
+  return now;
 }
 
 // ------------------------------------------------------------ Fensterlayout pro Spieler

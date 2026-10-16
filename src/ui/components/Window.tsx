@@ -12,19 +12,25 @@ interface WindowProps {
   onFocus: () => void;
   onClose: () => void;
   onMinimize?: () => void;
+  /** Maximieren/Wiederherstellen; ohne Handler gibt es keinen Knopf. */
+  onMaximize?: () => void;
+  maximized?: boolean;
   onMove: (x: number, y: number) => void;
   children: ReactNode;
   statusText?: string;
+  /** Kennung für die Zoom-Animation zur Taskleiste */
+  winId?: string;
 }
 
 /** Ein verschiebbares Fenster im Stil von Windows 95. */
-export function Window({ title, icon, x, y, width = 420, z, active, onFocus, onClose, onMinimize, onMove, children, statusText }: WindowProps) {
+export function Window({ title, icon, x, y, width = 420, z, active, onFocus, onClose, onMinimize, onMaximize, maximized, onMove, children, statusText, winId }: WindowProps) {
   const drag = useRef<{ dx: number; dy: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   function onPointerDown(e: React.PointerEvent) {
     if ((e.target as HTMLElement).closest('button')) return;
     onFocus();
+    if (maximized) return; // Maximierte Fenster bleiben, wo sie sind.
     drag.current = { dx: e.clientX - x, dy: e.clientY - y };
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   }
@@ -42,21 +48,35 @@ export function Window({ title, icon, x, y, width = 420, z, active, onFocus, onC
   return (
     <div
       ref={ref}
-      className={`window raised ${active ? 'active' : ''}`}
-      style={{ left: x, top: y, width, zIndex: z }}
+      className={`window raised ${active ? 'active' : ''} ${maximized ? 'maximized' : ''}`}
+      style={maximized ? { zIndex: z } : { left: x, top: y, width, zIndex: z }}
+      data-win={winId}
       onPointerDownCapture={onFocus}
       role="dialog"
       aria-label={title}
     >
-      <div className="titlebar" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
+      <div
+        className="titlebar"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onDoubleClick={(e) => {
+          if (!(e.target as HTMLElement).closest('button')) onMaximize?.();
+        }}
+      >
         {icon && <PixelIcon name={icon} />}
         <span className="title">{title}</span>
         {onMinimize && (
           <button className="btn tb-btn" onClick={onMinimize} aria-label="Minimieren">
-            _
+            <span className="glyph-min" />
           </button>
         )}
-        <button className="btn tb-btn" onClick={onClose} aria-label="Schließen">
+        {onMaximize && (
+          <button className="btn tb-btn" onClick={onMaximize} aria-label={maximized ? 'Wiederherstellen' : 'Maximieren'}>
+            <span className={maximized ? 'glyph-restore' : 'glyph-max'} />
+          </button>
+        )}
+        <button className="btn tb-btn tb-close" onClick={onClose} aria-label="Schließen">
           ✕
         </button>
       </div>

@@ -218,6 +218,81 @@ label.check {
   line-height: 10px;
   font-weight: bold;
   color: var(--dark);
+  position: relative;
+}
+
+/* Abstand vor dem Schließen-Knopf wie bei Win95 */
+.titlebar .tb-close {
+  margin-left: 2px;
+}
+
+.window:not(.active) .titlebar .title {
+  color: var(--face);
+}
+
+/* Fenster-Symbole aus Pixeln: Minimieren, Maximieren, Wiederherstellen */
+.glyph-min,
+.glyph-max,
+.glyph-restore,
+.glyph-restore::after {
+  position: absolute;
+  display: block;
+  box-sizing: border-box;
+}
+
+.glyph-min {
+  left: 4px;
+  bottom: 3px;
+  width: 6px;
+  height: 2px;
+  background: var(--dark);
+}
+
+.glyph-max {
+  left: 3px;
+  top: 2px;
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--dark);
+  border-top-width: 2px;
+}
+
+.glyph-restore {
+  left: 5px;
+  top: 2px;
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--dark);
+  border-top-width: 2px;
+}
+
+.glyph-restore::after {
+  content: '';
+  left: -4px;
+  top: 2px;
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--dark);
+  border-top-width: 2px;
+  background: var(--face);
+}
+
+.window.maximized {
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+}
+
+/* Rahmen, der beim Minimieren zur Taskleiste fliegt */
+.zoom-rect {
+  position: fixed;
+  z-index: 9000;
+  pointer-events: none;
+  border: 2px solid var(--shadow);
+  outline: 1px solid var(--light);
 }
 
 .window-body {
@@ -538,8 +613,41 @@ table.kv tr.sum td {
 }
 
 .taskbar .tray {
-  padding: 3px 8px;
+  padding: 1px 6px 1px 3px;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+}
+
+.tray-icon {
+  position: relative;
+  border: 0;
+  background: none;
+  padding: 0;
+  display: flex;
+  cursor: pointer;
+}
+
+.tray-badge {
+  position: absolute;
+  right: -5px;
+  top: -4px;
+  min-width: 11px;
+  padding: 0 2px;
+  font-size: 9px;
+  line-height: 11px;
+  text-align: center;
+  color: var(--light);
+  background: var(--bad);
+  border: 1px solid var(--light);
+}
+
+.tray-year {
+  border-left: 1px solid var(--shadow);
+  box-shadow: inset 1px 0 var(--light);
+  padding-left: 6px;
 }
 
 .start-menu {
@@ -553,12 +661,12 @@ table.kv tr.sum td {
 
 .start-menu .stripe {
   width: 22px;
+  font-weight: normal;
+  color: var(--hilight);
   background: linear-gradient(0deg, var(--title-a), var(--title-b));
-  color: var(--light);
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-  font-weight: bold;
-  font-size: 14px;
+  font-size: 15px;
   padding: 6px 2px;
 }
 
@@ -588,10 +696,124 @@ table.kv tr.sum td {
   outline: none;
 }
 
+.start-menu .stripe b {
+  color: var(--light);
+}
+
+.start-menu li.folder {
+  position: relative;
+}
+
+.start-menu .arrow {
+  font-size: 8px;
+}
+
+.start-menu li button.open {
+  background: var(--select);
+  color: var(--light);
+}
+
+.submenu {
+  position: absolute;
+  left: 100%;
+  bottom: -3px;
+  margin-left: -3px;
+  min-width: 190px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+/* ------------------------------------------------------------------ Menüs (Kontext- und Untermenüs) */
+.menu {
+  position: fixed;
+  z-index: 7000;
+  min-width: 170px;
+}
+
+.menu ul,
+.submenu ul {
+  list-style: none;
+  margin: 0;
+  padding: 2px;
+}
+
+.menu li button,
+.submenu li button {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 3px 16px 3px 4px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.menu li button:disabled,
+.submenu li button:disabled {
+  color: var(--shadow);
+  text-shadow: 1px 1px var(--light);
+  cursor: default;
+}
+
+.menu li button:not(:disabled):hover,
+.menu li button:not(:disabled):focus-visible,
+.submenu li button:not(:disabled):hover,
+.submenu li button:not(:disabled):focus-visible {
+  background: var(--select);
+  color: var(--light);
+  outline: none;
+}
+
+.menu-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+
+.menu li.sep,
+.submenu li.sep,
 .start-menu li.sep {
   border-top: 1px solid var(--shadow);
   border-bottom: 1px solid var(--light);
   margin: 2px 0;
+}
+
+/* ------------------------------------------------------------------ Anzeige-Eigenschaften */
+.monitor-preview {
+  width: 184px;
+  margin: 4px auto 8px;
+}
+
+.monitor-screen {
+  height: 110px;
+  border: 10px solid var(--face);
+  box-shadow: inset 1px 1px var(--dark), inset -1px -1px var(--light), 0 0 0 1px var(--shadow), 2px 2px 0 1px var(--dark);
+  position: relative;
+}
+
+.monitor-window {
+  position: absolute;
+  left: 24px;
+  top: 18px;
+  width: 80px;
+  height: 46px;
+  padding: 2px;
+}
+
+.monitor-window .titlebar {
+  height: 7px;
+  background: linear-gradient(90deg, var(--title-a), var(--title-b));
+}
+
+.monitor-foot {
+  width: 70px;
+  height: 12px;
+  margin: 4px auto 0;
+  background: var(--face);
+  box-shadow: inset 1px 1px var(--light), inset -1px -1px var(--dark);
 }
 
 /* ------------------------------------------------------------------ Dialoge */

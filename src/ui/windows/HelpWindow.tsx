@@ -38,10 +38,14 @@ export function HelpWindow() {
         Edler → Freiherr → Baron → Graf → Fürst → Herzog → Kurfürst → König → Kaiser. Alle Voraussetzungen müssen gleichzeitig erfüllt sein, max. eine Beförderung pro Jahr. Ist ein König
         im Besitz einer Kathedrale, wird der Reichstag einberufen: 7 Stimmen, 4 gewinnen.
       </p>
-      <h4>Tastatur</h4>
-      <p>
-        <b>F2</b> – Boss-Taste (Tabellenkalkulation). <b>Esc</b> – zurück.
-      </p>
+      <h4>Desktop &amp; Tastatur</h4>
+      <ul>
+        <li>Doppelklick auf ein Symbol öffnet es (am Handy genügt ein Tipp). Pfeiltasten wählen ein Symbol, <b>Enter</b> öffnet es.</li>
+        <li>Doppelklick auf die Titelleiste maximiert ein Fenster. Rechtsklick auf Desktop oder Taskleiste ordnet die Fenster an; unter „Eigenschaften" wählt Ihr die Hintergrundfarbe.</li>
+        <li>
+          <b>F2</b> – Boss-Taste (Tabellenkalkulation). <b>Esc</b> – zurück bzw. Menü schließen.
+        </li>
+      </ul>
       <h4>Danksagung</h4>
       <p>
         Schrift: <b>WIN95FA</b> von Alina Sava, lizenziert unter der SIL Open Font License 1.1 (siehe <code>licenses/WIN95FA-OFL.txt</code>). Alle Symbole sind eigene Pixelgrafiken.
