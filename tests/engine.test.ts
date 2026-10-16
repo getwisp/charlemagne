@@ -400,6 +400,32 @@ describe('Diplomatie', () => {
     expect(exposed('rob')).toBe(0);
   });
 
+  it('Kriegstreiber bricht alte Pakte, wenn das Opfer blank dasteht – junge nicht', () => {
+    const attempts = (treatyAge: number) => {
+      let hits = 0;
+      for (let seed = 1; seed <= 40; seed++) {
+        const s = newGame({
+          seed,
+          players: [
+            { name: 'Opfer', isAI: false },
+            { name: 'Wallenstein', isAI: true, archetype: 'kriegstreiber' },
+          ],
+        });
+        s.year += 10;
+        s.players[0].military.mercenaries = 0;
+        s.players[1].military.mercenaries = 500;
+        s.players[1].gold = 1e6;
+        concludeTreaty(s, 'nap', 'p1', 'p2');
+        s.treaties![0].since = s.year - treatyAge;
+        const after = planAiTurn(s, 'p2');
+        if (after.queue.some((a) => a.kind === 'attack' && a.target === 'p1')) hits++;
+      }
+      return hits;
+    };
+    expect(attempts(0)).toBe(0);
+    expect(attempts(3)).toBeGreaterThan(0);
+  });
+
   it('KI greift Vertragspartner nicht an und beantwortet Angebote', () => {
     let s = newGame({
       seed: 9,

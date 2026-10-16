@@ -45,12 +45,14 @@ describe('KI-Simulation', () => {
     const titleSum = [0, 0, 0, 0];
     const emperor = [0, 0, 0, 0];
     let years = 0;
-    const diplo = { treaties: 0, breaches: 0, allianceBattles: 0 };
+    const diplo = { treaties: 0, breaches: 0, ktBreaches: 0, rsBreaches: 0, allianceBattles: 0 };
     for (let seed = 1; seed <= seeds; seed++) {
       const s = runAiGame(seed, 120);
       years += s.year - 1700;
       diplo.treaties += s.chronicle.filter((c) => / schließen /.test(c.text)).length;
       diplo.breaches += s.chronicle.filter((c) => c.text.startsWith('Wortbruch')).length;
+      diplo.ktBreaches += s.chronicle.filter((c) => c.text.startsWith(`Wortbruch: ${s.players[1].name}`)).length;
+      diplo.rsBreaches += s.chronicle.filter((c) => c.text.startsWith(`Wortbruch: ${s.players[2].name}`)).length;
       diplo.allianceBattles += s.chronicle.filter((c) => c.text.includes('Bündnistruppen')).length;
       const w = s.players.findIndex((p) => p.id === s.winnerId);
       wins[w]++;
@@ -62,7 +64,7 @@ describe('KI-Simulation', () => {
       console.log(`  ${n.padEnd(15)} Siege ${String(wins[i]).padStart(2)} (Kaiser ${emperor[i]})  Ø Endtitel ${(titleSum[i] / seeds).toFixed(2)}`),
     );
     console.log(
-      `  Diplomatie je Partie: ${(diplo.treaties / seeds).toFixed(1)} Verträge, ${(diplo.breaches / seeds).toFixed(2)} Wortbrüche, ${(diplo.allianceBattles / seeds).toFixed(2)} Schlachten mit Bündnistruppen`,
+      `  Diplomatie je Partie: ${(diplo.treaties / seeds).toFixed(1)} Verträge, ${(diplo.breaches / seeds).toFixed(2)} Wortbrüche (Kriegstreiber ${(diplo.ktBreaches / seeds).toFixed(2)}, Ränkeschmiedin ${(diplo.rsBreaches / seeds).toFixed(2)}), ${(diplo.allianceBattles / seeds).toFixed(2)} Schlachten mit Bündnistruppen`,
     );
   });
 

@@ -574,6 +574,7 @@ function militaryAndIntrigue(s: GameState, p: Player, w: Weights): void {
   if (w.military > 1.2 && p.title >= T.GRAF) knightPipeline(s, p, 10, budget(p) * 0.3);
 
   if (s.year === s.startYear) return;
+  if (opportunisticBreach(s, p)) return;
   if (p.archetype === 'raenkeschmiedin') return; // intrigiert bereits vor den Investitionen
   const enemies = hostility(s, p).filter((h) => h.value > 10);
   if (enemies.length === 0) return;
@@ -588,11 +589,7 @@ function militaryAndIntrigue(s: GameState, p: Player, w: Weights): void {
     }
     if (!chance(s, pAttack)) continue;
     // Bündnishilfe einrechnen: jeder Verbündete schickt einen Teil seines Heeres.
-    const estimate =
-      publicArmyEstimate(target) +
-      s.players
-        .filter((o) => o.id !== p.id && o.id !== target.id && treatiesBetween(s, o.id, target.id).some((t) => t.type === 'alliance'))
-        .reduce((sum, o) => sum + publicArmyEstimate(o) * ALLIANCE_SHARE, 0);
+    const estimate = estimatedDefense(s, p, target);
     const fraction = 0.7;
     const myPower = attackPower(p, fraction, target.id);
     if (myPower > estimate * (1.3 / w.aggression) + 5) {
@@ -616,6 +613,47 @@ function militaryAndIntrigue(s: GameState, p: Player, w: Weights): void {
   if (mission === 'assassinate' && top.value < 60) mission = missions[1] ?? 'rob';
   if (gold < estimatedCovertDefense(top.target) * 0.2 && mission !== 'spy') mission = missions[missions.length - 1];
   attempt(() => mut.queueCovert(s, p.id, top.target.id, mission, gold, chance(s, 0.5) ? 'mill' : 'grain'));
+}
+
+/** Öffentlich geschätzte Verteidigung inklusive Bündnistruppen (ohne uns selbst). */
+function estimatedDefense(s: GameState, p: Player, target: Player): number {
+  return (
+    publicArmyEstimate(target) +
+    s.players
+      .filter((o) => o.id !== p.id && o.id !== target.id && treatiesBetween(s, o.id, target.id).some((t) => t.type === 'alliance'))
+      .reduce((sum, o) => sum + publicArmyEstimate(o) * ALLIANCE_SHARE, 0)
+  );
+}
+
+/** Ab so vielen Vertragsjahren denken Wortbrüchige über Verrat nach: das Schutzgeld ist ausgegeben. */
+export const BREACH_MIN_TREATY_YEARS = 3;
+
+/**
+ * Wortbruch aus Gelegenheit: Der Kriegstreiber (und im Spätspiel die Ränkeschmiedin)
+ * überfällt einen Vertragspartner, wenn der Pakt schon Jahre läuft und das Opfer
+ * militärisch blank dasteht. Liefert true, wenn ein Marschbefehl erteilt wurde.
+ */
+function opportunisticBreach(s: GameState, p: Player): boolean {
+  const profile =
+    p.archetype === 'kriegstreiber'
+      ? { chance: 0.2, margin: 2.0 }
+      : p.archetype === 'raenkeschmiedin' && p.title >= T.HERZOG
+        ? { chance: 0.3, margin: 1.5 }
+        : null;
+  if (!profile) return false;
+  const fraction = 0.7;
+  const candidates = s.players
+    .filter((o) => o.id !== p.id && o.debtorPrison === 0)
+    .filter((o) =>
+      treatiesBetween(s, p.id, o.id).some((t) => (t.type === 'nap' || t.type === 'alliance') && s.year - t.since >= BREACH_MIN_TREATY_YEARS),
+    )
+    .map((o) => ({ o, ratio: attackPower(p, fraction, o.id) / Math.max(1, estimatedDefense(s, p, o)) }))
+    .filter((c) => c.ratio > profile.margin)
+    // Die Ränkeschmiedin verrät bevorzugt den Führenden, der Kriegstreiber den Schwächsten.
+    .sort((a, b) => (p.archetype === 'raenkeschmiedin' ? score(b.o) - score(a.o) : b.ratio - a.ratio));
+  const victim = candidates[0];
+  if (!victim || !chance(s, profile.chance)) return false;
+  return attempt(() => mut.queueAttack(s, p.id, victim.o.id, fraction));
 }
 
 /**
