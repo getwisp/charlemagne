@@ -57,7 +57,7 @@ const WINDOWS: Record<WinId, WinDef> = {
   build: { title: 'Bauamt', icon: '🏗️', width: 560, component: BuildWindow, desktop: true },
   treasury: { title: 'Schatzamt', icon: '💰', width: 480, component: TreasuryWindow, desktop: true },
   bank: { title: 'Bankhaus Fugger', icon: '🏦', width: 520, component: BankWindow, desktop: true },
-  barracks: { title: 'Kaserne', icon: '⚔️', width: 560, component: BarracksWindow, desktop: true },
+  barracks: { title: 'Kaserne', icon: '⚔️', width: 640, component: BarracksWindow, desktop: true },
   tavern: { title: 'Taverne „Zum goldenen Dolch“', icon: '🍺', width: 520, component: TavernWindow, desktop: true },
   throne: { title: 'Thronsaal', icon: '👑', width: 600, component: ThroneWindow, desktop: true },
   stats: { title: 'Statistik', icon: '📈', width: 520, component: StatsWindow, desktop: true },
@@ -127,12 +127,16 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
       const narrow = window.innerWidth < 700;
       if (narrow) return [...ws, { id, x: 2, y: 2, z, minimized: false }];
       // Neben die offenen Fenster stellen, damit nichts verdeckt wird; erst wenn kein Platz ist, kaskadieren.
-      const deskWidth = document.querySelector('.desktop')?.clientWidth ?? window.innerWidth - 220;
+      const desk = document.querySelector('.desktop')?.getBoundingClientRect();
+      const deskWidth = desk?.width ?? window.innerWidth - 220;
+      // Fenster beginnen rechts neben den Desktop-Symbolen, damit keines verdeckt wird.
+      const iconsRight = (document.querySelector('.icons')?.getBoundingClientRect().right ?? 100) - (desk?.left ?? 0);
+      const start = Math.min(Math.round(iconsRight + 8), Math.max(8, deskWidth - WINDOWS[id].width - 8));
       const visible = ws.filter((w) => !w.minimized);
-      const right = Math.max(100, ...visible.map((w) => w.x + WINDOWS[w.id].width + 8));
+      const right = Math.max(start, ...visible.map((w) => w.x + WINDOWS[w.id].width + 8));
       if (right + WINDOWS[id].width <= deskWidth) return [...ws, { id, x: right, y: 10, z, minimized: false }];
       const offset = (ws.length % 6) * 24;
-      return [...ws, { id, x: 100 + offset, y: 10 + offset, z, minimized: false }];
+      return [...ws, { id, x: start + offset, y: 10 + offset, z, minimized: false }];
     });
   }
   const focus = (id: WinId) => {

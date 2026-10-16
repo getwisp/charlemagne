@@ -384,7 +384,7 @@ table.kv tr.sum td {
 /* ------------------------------------------------------------------ Layout */
 .app {
   display: grid;
-  grid-template-columns: 210px 1fr;
+  grid-template-columns: 210px minmax(0, 1fr);
   grid-template-rows: 1fr 30px;
   height: 100%;
 }
@@ -510,6 +510,7 @@ table.kv tr.sum td {
   display: flex;
   gap: 3px;
   flex: 1;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -630,7 +631,8 @@ table.kv tr.sum td {
 
 @media (max-width: 700px) {
   .app {
-    grid-template-columns: 1fr;
+    /* minmax(0, …): sonst dehnt die Taskleiste die Spalte über den Bildschirm hinaus */
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr 30px;
   }
 

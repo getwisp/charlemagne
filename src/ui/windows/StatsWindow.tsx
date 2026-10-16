@@ -18,15 +18,15 @@ export function StatsWindow() {
   const [hover, setHover] = useState<number | null>(null);
   const data: HistoryEntry[] = me.history.slice(-10);
   const values = data.map((d) => d[metric]);
-  const max = Math.max(1, ...values);
-  const min = Math.min(0, ...values);
+  // Achse auf runde Werte um den Datenbereich legen, damit auch kleine Trends sichtbar werden.
+  const [min, max, step] = niceRange(values.length ? Math.min(...values) : 0, values.length ? Math.max(...values) : 1);
   const W = 480;
   const H = 220;
-  const pad = { l: 56, r: 12, t: 12, b: 26 };
+  const pad = { l: 60, r: 22, t: 12, b: 26 };
   const x = (i: number) => pad.l + (data.length <= 1 ? 0 : (i * (W - pad.l - pad.r)) / (data.length - 1));
   const y = (v: number) => pad.t + (1 - (v - min) / (max - min || 1)) * (H - pad.t - pad.b);
   const path = values.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => min + f * (max - min));
+  const ticks = Array.from({ length: Math.round((max - min) / step) + 1 }, (_, i) => min + i * step);
   const m = METRICS[metric];
 
   return (
@@ -75,4 +75,20 @@ export function StatsWindow() {
       </div>
     </div>
   );
+}
+
+/** Runde Achsengrenzen und Schrittweite (1, 2, 2,5 oder 5 × 10ⁿ) für etwa 4–6 Hilfslinien. */
+function niceRange(lo: number, hi: number): [number, number, number] {
+  if (!Number.isFinite(lo)) lo = 0;
+  if (hi - lo < 1) {
+    hi += 1;
+    lo = Math.max(0, lo - 1);
+  }
+  const span = hi - lo;
+  // Unten etwas Luft lassen, aber nicht unter 0
+  lo = Math.max(0, lo - span * 0.15);
+  const raw = (hi - lo) / 5;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((x) => x >= raw) ?? 10 * mag;
+  return [Math.floor(lo / step) * step, Math.ceil(hi / step) * step, step];
 }

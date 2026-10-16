@@ -60,11 +60,11 @@ export function Tabs<T extends string>({ tabs, active, onChange }: { tabs: { id:
 }
 
 export function Money({ value, signed }: { value: number; signed?: boolean }) {
-  const v = Math.round(value);
+  const v = Math.round(value) || 0; // keine „-0“
   const cls = signed ? (v > 0 ? 'pos' : v < 0 ? 'neg' : '') : v < 0 ? 'neg' : '';
   return <span className={cls}>{(signed && v > 0 ? '+' : '') + v.toLocaleString('de-DE')}</span>;
 }
 
 export function n(v: number): string {
-  return Math.round(v).toLocaleString('de-DE');
+  return (Math.round(v) || 0).toLocaleString('de-DE');
 }
