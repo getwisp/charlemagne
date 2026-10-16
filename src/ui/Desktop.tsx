@@ -124,9 +124,15 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
     setOpen((ws) => {
       const existing = ws.find((w) => w.id === id);
       if (existing) return ws.map((w) => (w.id === id ? { ...w, z, minimized: false } : w));
-      const offset = (ws.length % 6) * 24;
       const narrow = window.innerWidth < 700;
-      return [...ws, { id, x: narrow ? 2 : 100 + offset, y: narrow ? 2 : 10 + offset, z, minimized: false }];
+      if (narrow) return [...ws, { id, x: 2, y: 2, z, minimized: false }];
+      // Neben die offenen Fenster stellen, damit nichts verdeckt wird; erst wenn kein Platz ist, kaskadieren.
+      const deskWidth = document.querySelector('.desktop')?.clientWidth ?? window.innerWidth - 220;
+      const visible = ws.filter((w) => !w.minimized);
+      const right = Math.max(100, ...visible.map((w) => w.x + WINDOWS[w.id].width + 8));
+      if (right + WINDOWS[id].width <= deskWidth) return [...ws, { id, x: right, y: 10, z, minimized: false }];
+      const offset = (ws.length % 6) * 24;
+      return [...ws, { id, x: 100 + offset, y: 10 + offset, z, minimized: false }];
     });
   }
   const focus = (id: WinId) => {

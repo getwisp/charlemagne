@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { actions, freeLand, GRAIN_TRADE_UNIT, grainBuyCost, grainSellValue, landSellPrice } from '../../engine';
+import { actions, freeLand, GRAIN_TRADE_UNIT, grainBuyCost, grainNeed, grainSellValue, landSellPrice } from '../../engine';
 import { GroupBox, n, NumberField } from '../components/controls';
 import { useGame } from '../context';
 
@@ -28,6 +28,8 @@ export function MarketWindow() {
           </button>
         </div>
         <div className="hint">
+          Euer Vorrat: <b>{n(me.grain)} Scheffel</b> – reicht für {grainNeed(me) > 0 ? Math.floor((me.grain / grainNeed(me)) * 100) : 100} % des Bedarfs (Ration: {me.ration} %).
+          <br />
           Kauf kostet {n(grainBuyCost(state, grain))} Taler · Verkauf bringt {n(grainSellValue(state, grain))} Taler (Händlerspanne 10 %).
         </div>
         <div className="btn-row">
