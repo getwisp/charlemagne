@@ -71,6 +71,9 @@ function budget(p: Player): number {
  */
 export const TITLE_BLOCKER_MULTIPLIER = 3.0;
 
+/** Ab diesem Titel mildert die KI ihre Justiz auf höchstens Stufe 3 (Hexenprozesse vermeiden). */
+export const CROWN_CAUTION_TITLE = T.KURFUERST;
+
 /** Charakter-Gewichte je nach Spielphase. */
 export function effectiveWeights(p: Player, base: Weights): Weights {
   const w = { ...base };
@@ -254,7 +257,9 @@ function setPolicies(s: GameState, p: Player, w: Weights): void {
       tolls: base.tolls + (tight ? 3 : 0),
     }),
   );
-  attempt(() => mut.setJustice(s, p.id, ARCHETYPES[arch].justice));
+  // Vor der Krone die Richter zügeln: strenge Justiz bringt Hexenprozesse, und Skandale kosten Bischofsstimmen.
+  const justice = p.title >= CROWN_CAUTION_TITLE ? Math.min(3, ARCHETYPES[arch].justice) : ARCHETYPES[arch].justice;
+  attempt(() => mut.setJustice(s, p.id, justice));
   void w;
 }
 

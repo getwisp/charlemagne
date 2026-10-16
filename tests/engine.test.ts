@@ -426,6 +426,13 @@ describe('Diplomatie', () => {
     expect(attempts(3)).toBeGreaterThan(0);
   });
 
+  it('Kriegstreiber zügelt vor der Krone seine Richter', () => {
+    const s = newGame({ seed: 4, players: [{ name: 'A', isAI: false }, { name: 'W', isAI: true, archetype: 'kriegstreiber' }] });
+    expect(planAiTurn(s, 'p2').players[1].justice).toBe(4);
+    s.players[1].title = T.KURFUERST;
+    expect(planAiTurn(s, 'p2').players[1].justice).toBe(3);
+  });
+
   it('KI greift Vertragspartner nicht an und beantwortet Angebote', () => {
     let s = newGame({
       seed: 9,
