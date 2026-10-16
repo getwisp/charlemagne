@@ -17,7 +17,7 @@ export function HeraldWindow({ read }: { read: HeraldMessage[] }) {
           {report.deaths + report.starved + report.emigrants}. Ratten: {report.ratLoss.toLocaleString('de-DE')} Scheffel.
         </div>
       )}
-      <div className="sunken field" style={{ maxHeight: 320, overflow: 'auto', padding: 6 }}>
+      <div className="sunken field scroll-area" style={{ maxHeight: 320 }}>
         {read.length === 0 && <div className="muted">Keine Meldungen in diesem Jahr.</div>}
         {read.map((m) => (
           <div key={m.id} style={{ marginBottom: 6 }}>

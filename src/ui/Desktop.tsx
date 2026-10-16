@@ -453,7 +453,7 @@ function HeraldReport({ year, messages, onOk }: { year: number; messages: Herald
           Der Herold verkündet {messages.length === 1 ? 'eine Meldung' : `${messages.length} Meldungen`} zum Jahreswechsel.
         </div>
       </div>
-      <div className="sunken field" style={{ maxHeight: '55vh', overflow: 'auto', padding: 6, userSelect: 'text' }}>
+      <div className="sunken field scroll-area" style={{ maxHeight: '55vh', userSelect: 'text' }}>
         {sorted.map((m) => (
           <div key={m.id} className={`herald-item herald-${m.severity}`}>
             <div>

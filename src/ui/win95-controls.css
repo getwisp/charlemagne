@@ -49,6 +49,15 @@
   background-image: var(--img-arrow-right);
 }
 
+/* Scrollbereiche mit Text: Abstand zum Scrollbalken, damit nichts daran klebt.
+   scrollbar-gutter hält den Platz frei, auch solange (noch) kein Balken nötig ist –
+   so springt der Text nicht, wenn der Inhalt wächst. */
+.scroll-area {
+  overflow: auto;
+  padding: 6px 10px 6px 6px;
+  scrollbar-gutter: stable;
+}
+
 /* Firefox kennt die Pseudo-Elemente nicht – dort wenigstens die Farben. Chrome
    ignoriert die WebKit-Regeln, sobald scrollbar-color gesetzt ist, daher nur hier. */
 @supports not selector(::-webkit-scrollbar) {

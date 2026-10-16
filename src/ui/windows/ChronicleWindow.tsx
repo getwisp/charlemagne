@@ -4,7 +4,7 @@ export function ChronicleWindow() {
   const { state } = useGame();
   const entries = [...state.chronicle].reverse();
   return (
-    <div className="sunken field" style={{ maxHeight: 360, overflow: 'auto', padding: 6 }}>
+    <div className="sunken field scroll-area" style={{ maxHeight: 360 }}>
       {entries.length === 0 && <div className="muted">Noch ist nichts Denkwürdiges geschehen.</div>}
       {entries.map((c, i) => (
         <div key={i} style={{ marginBottom: 3 }}>

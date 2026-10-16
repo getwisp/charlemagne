@@ -1,6 +1,6 @@
 export function HelpWindow() {
   return (
-    <div style={{ lineHeight: 1.45, maxHeight: 420, overflow: 'auto', userSelect: 'text' }}>
+    <div className="scroll-area" style={{ lineHeight: 1.45, maxHeight: 420, userSelect: 'text' }}>
       <h3 style={{ marginTop: 0 }}>Kaiser-Klon – Kurzanleitung</h3>
       <p>
         Jede Runde ist ein Jahr. Zu Jahresbeginn bestimmen Wetter und Zufall Ernte und Preise. Dann gebt Ihr Eure Befehle – Handel, Bau, Bank und Rekrutierung wirken sofort, Angriffe,

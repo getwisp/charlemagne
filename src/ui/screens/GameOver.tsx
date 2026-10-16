@@ -47,7 +47,7 @@ export function GameOver({ state, onNewGame }: { state: GameState; onNewGame: ()
         </div>
       </GroupBox>
       <GroupBox label="Chronik (Auszug)">
-        <div className="sunken field" style={{ maxHeight: 140, overflow: 'auto', padding: 4 }}>
+        <div className="sunken field scroll-area" style={{ maxHeight: 140 }}>
           {state.chronicle.slice(-15).map((c, i) => (
             <div key={i}>
               <b>{c.year}</b>: {c.text}
