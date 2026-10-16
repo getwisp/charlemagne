@@ -36,7 +36,7 @@ export function HelpWindow() {
       <h4>Titel &amp; Kaiserwahl</h4>
       <p>
         Edler → Freiherr → Baron → Graf → Fürst → Herzog → Kurfürst → König → Kaiser. Alle Voraussetzungen müssen gleichzeitig erfüllt sein, max. eine Beförderung pro Jahr. Ist ein König
-        im Besitz einer Kathedrale, wird der Reichstag einberufen: 7 Stimmen, 4 gewinnen. Bischöfe achten auf Schmiergeld, Kathedralen, Frömmigkeit und Skandale; alle 10 Jahre verjährt ein Skandal.
+        im Besitz einer Kathedrale, wird der Reichstag einberufen: 7 Stimmen, 4 gewinnen.
       </p>
       <h4>Tastatur</h4>
       <p>

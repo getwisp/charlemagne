@@ -276,8 +276,6 @@ export const ELECTION_MAJORITY = 4;
 export const BISHOP_CATHEDRAL_BONUS = 4000;
 export const BISHOP_PIETY_BONUS = 500;
 export const BISHOP_SCANDAL_MALUS = 3000;
-/** Alle so viele Jahre verjährt ein Skandal. */
-export const SCANDAL_DECAY_YEARS = 10;
 /** Unter diesem Wert enthält sich ein Kirchenfürst (Grundpreis seiner Stimme). */
 export const BISHOP_MIN_SCORE = 15000;
 export const BISHOP_NAMES = [
