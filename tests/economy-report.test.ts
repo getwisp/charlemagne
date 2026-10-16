@@ -122,9 +122,12 @@ it.runIf(process.env.SIM_INCOME)('Einnahmen-Aufschlüsselung je Archetyp', async
 it.runIf(process.env.SIM_DECADES)('Wirtschaftsverlauf je Archetyp (Jahrzehnte)', async () => {
   const { mut, previewEconomy, score, cityCount, totalDebt, tradeAgreementCount, BUILDINGS } = await import('../src/engine');
   const SEEDS = Number(process.env.SIM_DECADES) || 30;
+  const PLAYERS = Number(process.env.SIM_DECADES_PLAYERS) || 4;
+  const wins: Record<string, number> = {};
+  const seatCount: Record<string, number> = {};
   const SNAP = [1710, 1720, 1730, 1740, 1750, 1760, 1770];
   // kumulierte Ausgaben/Einnahmen je Archetyp (laufende Partie)
-  const flowKeys = ['build', 'land', 'army', 'covert', 'bribe', 'tributePaid', 'tributeGot'] as const;
+  const flowKeys = ['build', 'land', 'army', 'covert', 'bribe', 'tributePaid', 'tributeGot', 'conquest', 'landLost'] as const;
   type F = (typeof flowKeys)[number];
   const snapKeys = ['n', 'score', 'title', 'worth', 'cash', 'income', 'incomeTax', 'trade', 'tradeBonus', 'cityBonus', 'pilgrims', 'crime', 'upkeepMil', 'upkeepBld', 'pop', 'landHa', 'buildings', 'cities', 'cathedrals', 'treaties', 'taxRate', ...flowKeys] as const;
   type K = (typeof snapKeys)[number];
@@ -142,8 +145,10 @@ it.runIf(process.env.SIM_DECADES)('Wirtschaftsverlauf je Archetyp (Jahrzehnte)',
   };
   try {
     for (let seed = 1; seed <= SEEDS; seed++) {
-      let s = newGame({ seed, endYear: 1820, players: ARCHS.map((a) => ({ name: a, isAI: true, archetype: a })) });
-      flows = Object.fromEntries(ARCHS.map((a) => [a, Object.fromEntries(flowKeys.map((k) => [k, 0])) as Record<F, number>]));
+      // SIM_DECADES_PLAYERS=9: Archetypen reihum mit dem Seed rotiert (wie im Aufstellungs-Lauf)
+      const seats = PLAYERS === 4 ? ARCHS : Array.from({ length: PLAYERS }, (_, i) => ARCHS[(i + seed) % 4]);
+      let s = newGame({ seed, endYear: 1820, players: seats.map((a, i) => ({ name: `${a}#${i}`, isAI: true, archetype: a })) });
+      flows = Object.fromEntries(s.players.map((p) => [p.name, Object.fromEntries(flowKeys.map((k) => [k, 0])) as Record<F, number>]));
       while (s.phase === 'orders') {
         current = s;
         for (const p of s.players) { s = planAiTurn(s, p.id); current = s; }
@@ -155,7 +160,7 @@ it.runIf(process.env.SIM_DECADES)('Wirtschaftsverlauf je Archetyp (Jahrzehnte)',
         for (const p of s.players) flows[p.name].army += militaryUpkeep(p);
         if (SNAP.includes(s.year)) {
           for (const p of s.players) {
-            const r = agg[s.year][p.name];
+            const r = agg[s.year][p.archetype!];
             const e = previewEconomy(s, p);
             r.n++; r.score += score(p); r.title += p.title;
             r.worth += p.gold + p.savings - totalDebt(p); r.cash += p.gold;
@@ -168,8 +173,21 @@ it.runIf(process.env.SIM_DECADES)('Wirtschaftsverlauf je Archetyp (Jahrzehnte)',
             for (const k of flowKeys) r[k] += flows[p.name][k];
           }
         }
+        const y = s.year;
         s = resolveYear(s);
         current = s;
+        for (const p of s.players) {
+          for (const m of (s.messages[p.id] ?? []).filter((m) => m.year === y)) {
+            const v = num(m.text)[0] ?? 0;
+            if (m.title === 'Sieg auf dem Schlachtfeld!' || m.title === 'Angriff abgewehrt!') flows[p.name].conquest += v;
+            if (m.title === 'Überfall!' || m.title === 'Niederlage!') flows[p.name].landLost += v;
+          }
+        }
+        if (s.phase === 'ended') {
+          const w = s.players.find((p) => p.id === s.winnerId)!;
+          wins[w.archetype!] = (wins[w.archetype!] ?? 0) + 1;
+          for (const p of s.players) seatCount[p.archetype!] = (seatCount[p.archetype!] ?? 0) + 1;
+        }
         s.messages = {};
       }
     }
@@ -179,16 +197,17 @@ it.runIf(process.env.SIM_DECADES)('Wirtschaftsverlauf je Archetyp (Jahrzehnte)',
   const k = (v: number) => (Math.abs(v) >= 10000 ? `${(v / 1000).toFixed(0)}k` : Math.round(v).toLocaleString('de-DE'));
   const short = { pfeffersack: 'Pfeffersack', kriegstreiber: 'Kriegstreiber', raenkeschmiedin: 'Ränkeschm.', kirchenfuerst: 'Kirchenfürst' } as Record<string, string>;
   for (const y of SNAP) {
-    const n = agg[y].pfeffersack.n;
+    const n = Math.round(agg[y].pfeffersack.n / (PLAYERS / 4));
     if (!n) continue;
-    console.log(`\n== Anno ${y} (${n} laufende Partien) – Bestand und Jahreseinkommen je Archetyp, Ausgaben kumuliert seit 1700`);
-    console.log('Archetyp       Punkte Titel Vermögen  Bürger   Land  Geb. Städte Kath. | Eink./J  Eink.st Handel (dv. Vertr.) Stadtb. Pilger Krim. | Sold/J Bau-Unt/J | Σ Bauten Σ Land  Σ Sold  Σ Tavern Σ Bestech Tribut gez./erh. | Handelsv. Eink.-Satz');
+    console.log(`\n== Anno ${y} (≈${n} laufende Partien, Werte je Fürst) – Bestand und Jahreseinkommen je Archetyp, Ausgaben kumuliert seit 1700`);
+    console.log('Archetyp       Punkte Titel Vermögen  Bürger   Land  Geb. Städte Kath. | Eink./J  Eink.st Handel (dv. Vertr.) Stadtb. Pilger Krim. | Sold/J Bau-Unt/J | Σ Bauten Σ Land  Σ Sold  Σ Tavern Σ Bestech Tribut gez./erh. | Handelsv. Eink.-Satz | Σ erobert Σ verloren');
     for (const a of ARCHS) {
       const r = agg[y][a];
       const m = (key: K) => r[key] / r.n;
       console.log(
-        `${short[a].padEnd(13)} ${k(m('score')).padStart(6)} ${m('title').toFixed(1).padStart(5)} ${k(m('worth')).padStart(8)} ${k(m('pop')).padStart(7)} ${k(m('landHa')).padStart(6)} ${m('buildings').toFixed(0).padStart(5)} ${m('cities').toFixed(1).padStart(6)} ${m('cathedrals').toFixed(1).padStart(5)} | ${k(m('income')).padStart(7)} ${k(m('incomeTax')).padStart(8)} ${k(m('trade')).padStart(6)} (${k(m('tradeBonus')).padStart(5)}) ${k(m('cityBonus')).padStart(9)} ${k(m('pilgrims')).padStart(6)} ${k(-m('crime')).padStart(6)} | ${k(m('upkeepMil')).padStart(6)} ${k(m('upkeepBld')).padStart(9)} | ${k(m('build')).padStart(8)} ${k(m('land')).padStart(6)} ${k(m('army')).padStart(7)} ${k(m('covert')).padStart(8)} ${k(m('bribe')).padStart(8)} ${k(m('tributePaid')).padStart(7)}/${k(m('tributeGot')).padEnd(7)} | ${m('treaties').toFixed(1).padStart(9)} ${m('taxRate').toFixed(0).padStart(6)} %`,
+        `${short[a].padEnd(13)} ${k(m('score')).padStart(6)} ${m('title').toFixed(1).padStart(5)} ${k(m('worth')).padStart(8)} ${k(m('pop')).padStart(7)} ${k(m('landHa')).padStart(6)} ${m('buildings').toFixed(0).padStart(5)} ${m('cities').toFixed(1).padStart(6)} ${m('cathedrals').toFixed(1).padStart(5)} | ${k(m('income')).padStart(7)} ${k(m('incomeTax')).padStart(8)} ${k(m('trade')).padStart(6)} (${k(m('tradeBonus')).padStart(5)}) ${k(m('cityBonus')).padStart(9)} ${k(m('pilgrims')).padStart(6)} ${k(-m('crime')).padStart(6)} | ${k(m('upkeepMil')).padStart(6)} ${k(m('upkeepBld')).padStart(9)} | ${k(m('build')).padStart(8)} ${k(m('land')).padStart(6)} ${k(m('army')).padStart(7)} ${k(m('covert')).padStart(8)} ${k(m('bribe')).padStart(8)} ${k(m('tributePaid')).padStart(7)}/${k(m('tributeGot')).padEnd(7)} | ${m('treaties').toFixed(1).padStart(9)} ${m('taxRate').toFixed(0).padStart(6)} % | ${k(m('conquest')).padStart(9)} ${k(m('landLost')).padStart(9)}`,
       );
     }
   }
+  console.log(`\nSiegquote je Archetyp (1,00 = fair, ${PLAYERS} Fürsten): ` + ARCHS.map((a) => `${short[a]} ${(((wins[a] ?? 0) / SEEDS) / ((seatCount[a] ?? 0) / SEEDS / PLAYERS)).toFixed(2)}`).join('  '));
 });
