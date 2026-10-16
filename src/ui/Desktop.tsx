@@ -21,6 +21,7 @@ import { ContextMenu, type MenuEntry } from './components/Menu';
 import { Alert, Modal, SEVERITY_ICON, Window } from './components/Window';
 import { DisplayProperties } from './DisplayProperties';
 import { StartMenu } from './StartMenu';
+import { onSoundChange, playSound, setSoundEnabled, soundEnabled } from './sound';
 import { zoomFromTask, zoomToTask } from './zoom';
 import { PixelIcon, type IconName } from './icons';
 import { useGame } from './context';
@@ -107,6 +108,14 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
   const [displayProps, setDisplayProps] = useState(false);
   const [confirmQuit, setConfirmQuit] = useState(false);
   const clock = useClock();
+  const sound = useSoundSetting();
+
+  // Startklang einmal pro Sitzung, wenn der Desktop zum ersten Mal erscheint
+  useEffect(() => {
+    if (startupPlayed) return;
+    startupPlayed = true;
+    playSound('start');
+  }, []);
 
   const unread = state.messages[me.id] ?? [];
   const preview = useMemo(() => previewEconomy(state, me), [me, state]);
@@ -128,6 +137,12 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
   // Boss-Taste: F2 (oder Esc zum Zurückkehren)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && e.ctrlKey) {
+        // Strg+Esc öffnet das Startmenü wie bei Windows 95
+        e.preventDefault();
+        setStartOpen((o) => !o);
+        return;
+      }
       if (e.key === 'F2') {
         e.preventDefault();
         setBoss((b) => !b);
@@ -218,7 +233,7 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
   const arrangeItems: MenuEntry[] = [
     { label: 'Überlappend', onClick: cascade, disabled: open.length === 0 },
     { label: 'Nebeneinander', onClick: tile, disabled: open.length === 0 },
-    { label: 'Alle Fenster minimieren', onClick: minimizeAll, disabled: open.every((w) => w.minimized) },
+    { label: 'Alle Fenster &minimieren', onClick: minimizeAll, disabled: open.every((w) => w.minimized) },
   ];
 
   function onIconKey(e: React.KeyboardEvent<HTMLDivElement>) {
@@ -450,6 +465,9 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
           <PixelIcon name="spreadsheet" /> Boss
         </button>
         <div className="tray sunken">
+          <button className="tray-icon" onClick={() => setSoundEnabled(!sound)} title={sound ? 'Klänge an – klicken zum Stummschalten' : 'Klänge aus – klicken zum Einschalten'} aria-label="Lautstärke">
+            <PixelIcon name={sound ? 'speaker' : 'speakerOff'} />
+          </button>
           <button className="tray-icon" onClick={() => openWindow('herald')} title={unread.length ? `${unread.length} ungelesene Meldung(en)` : 'Herold'}>
             <PixelIcon name="herald" />
             {unread.length > 0 && <span className="tray-badge">{unread.length}</span>}
@@ -486,6 +504,7 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
               icon: 'settings',
               items: [
                 { label: 'Anzeige…', icon: 'monitor', onClick: () => setDisplayProps(true) },
+                { label: sound ? 'Klänge ausschalten' : 'Klänge einschalten', icon: sound ? 'speakerOff' : 'speaker', onClick: () => setSoundEnabled(!sound) },
                 'sep',
                 ...arrangeItems,
                 { label: 'Fensterlayout zurücksetzen', onClick: () => setOpen([]) },
@@ -494,7 +513,7 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
           ]}
           items={[
             { label: 'Hilfe', icon: 'help', onClick: () => openWindow('help') },
-            { label: 'Boss-Taste (F2)', icon: 'spreadsheet', onClick: () => setBoss(true) },
+            { label: 'Boss-&Taste (F2)', icon: 'spreadsheet', onClick: () => setBoss(true) },
             'sep',
             { label: 'Beenden…', icon: 'door', onClick: () => setConfirmQuit(true) },
           ]}
@@ -606,6 +625,11 @@ const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, good: 2
 function HeraldReport({ year, messages, onOk }: { year: number; messages: HeraldMessage[]; onOk: () => void }) {
   const sorted = [...messages].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
   const worst = sorted[0].severity;
+  const promoted = messages.some((m) => m.title === 'Beförderung!');
+  useEffect(() => {
+    playSound(promoted ? 'fanfare' : worst === 'error' ? 'chord' : 'ding');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year]);
   return (
     <Modal title={`Herold – Anno ${year}`} icon="herald" width={500}>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '4px 4px 8px' }}>
@@ -666,6 +690,14 @@ function Stat({
       </span>
     </div>
   );
+}
+
+let startupPlayed = false;
+
+function useSoundSetting(): boolean {
+  const [on, setOn] = useState(soundEnabled);
+  useEffect(() => onSoundChange(setOn), []);
+  return on;
 }
 
 /** Uhrzeit für den Infobereich, minütlich aktualisiert. */

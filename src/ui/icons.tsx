@@ -707,6 +707,42 @@ export const ICONS = {
     '......kkkk......',
     '................',
   ],
+  speaker: [
+    '................',
+    '.......k........',
+    '......kk....k...',
+    '.....kwk.....k..',
+    '....kwgk..k...k.',
+    'kkkkwggk...k..k.',
+    'kwwwgggk...k...k',
+    'kwggdggk...k...k',
+    'kwggdggk...k...k',
+    'kgddgggk...k...k',
+    'kkkkdggk...k..k.',
+    '....kdgk..k...k.',
+    '.....kdk.....k..',
+    '......kk....k...',
+    '.......k........',
+    '................',
+  ],
+  speakerOff: [
+    '................',
+    '.......k........',
+    '......kk........',
+    '.....kwk........',
+    '....kwgk........',
+    'kkkkwggk.rr..rr.',
+    'kwwwgggk..rrrr..',
+    'kwggdggk...rr...',
+    'kwggdggk..rrrr..',
+    'kgddgggk.rr..rr.',
+    'kkkkdggk........',
+    '....kdgk........',
+    '.....kdk........',
+    '......kk........',
+    '.......k........',
+    '................',
+  ],
 } satisfies Record<string, string[]>;
 
 export type IconName = keyof typeof ICONS;
@@ -754,3 +790,12 @@ export function PixelIcon({ name, size = 16, title, className }: { name: IconNam
 }
 
 export const PALETTE_CHARS = Object.keys(PALETTE);
+
+/** Pixel-Symbol als SVG-Data-URI, z. B. für Mauszeiger. */
+export function iconDataUri(name: IconName, size = 32): string {
+  const body = toRects(ICONS[name])
+    .map((r) => `<rect x='${r.x}' y='${r.y}' width='${r.w}' height='1' fill='${r.fill}'/>`)
+    .join('');
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}' viewBox='0 0 16 16' shape-rendering='crispEdges'>${body}</svg>`;
+  return `data:image/svg+xml,${svg.replace(/#/g, '%23')}`;
+}

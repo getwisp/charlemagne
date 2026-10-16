@@ -36,9 +36,50 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
   );
 }
 
+/** Kürzelbuchstabe: nach „&" im Text, sonst der erste Buchstabe. */
+export function accelOf(label: string): string {
+  const i = label.indexOf('&');
+  return (i >= 0 ? label[i + 1] : label.match(/[A-Za-zÄÖÜäöü]/)?.[0] ?? '').toLowerCase();
+}
+
+/** Text mit unterstrichenem Kürzelbuchstaben wie in Win95-Menüs. */
+export function AccelLabel({ label }: { label: string }) {
+  const amp = label.indexOf('&');
+  const i = amp >= 0 ? amp + 1 : label.search(/[A-Za-zÄÖÜäöü]/);
+  const clean = (t: string) => t.replace('&', '');
+  if (i < 0) return <>{clean(label)}</>;
+  return (
+    <span>
+      {clean(label.slice(0, i))}
+      <u>{label[i]}</u>
+      {label.slice(i + 1)}
+    </span>
+  );
+}
+
+/**
+ * Tastatur in Menüs: Pfeiltasten wandern, ein Buchstabe löst den passenden Eintrag aus.
+ * Teilen sich mehrere Einträge den Buchstaben, springt der Fokus reihum.
+ */
+export function menuKeys(e: React.KeyboardEvent<HTMLElement>): void {
+  moveFocus(e);
+  if (e.key.length !== 1 || e.ctrlKey || e.altKey || e.metaKey) return;
+  const key = e.key.toLowerCase();
+  const buttons = [...e.currentTarget.querySelectorAll<HTMLButtonElement>(':scope > li > button:not(:disabled)')].filter((b) => b.dataset.accel === key);
+  if (buttons.length === 0) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (buttons.length === 1) {
+    buttons[0].click();
+    return;
+  }
+  const i = buttons.indexOf(document.activeElement as HTMLButtonElement);
+  buttons[(i + 1) % buttons.length].focus();
+}
+
 export function MenuList({ items, onClose }: { items: MenuEntry[]; onClose: () => void }) {
   return (
-    <ul onKeyDown={(e) => moveFocus(e)}>
+    <ul onKeyDown={menuKeys}>
       {items.map((it, i) =>
         it === 'sep' ? (
           <li key={i} className="sep" role="separator" />
@@ -47,6 +88,7 @@ export function MenuList({ items, onClose }: { items: MenuEntry[]; onClose: () =
             <button
               role="menuitem"
               disabled={it.disabled}
+              data-accel={accelOf(it.label)}
               style={it.bold ? { fontWeight: 'bold' } : undefined}
               onClick={() => {
                 onClose();
@@ -54,7 +96,7 @@ export function MenuList({ items, onClose }: { items: MenuEntry[]; onClose: () =
               }}
             >
               <span className="menu-icon">{it.icon && <PixelIcon name={it.icon} />}</span>
-              {it.label}
+              <AccelLabel label={it.label} />
             </button>
           </li>
         ),
@@ -67,6 +109,7 @@ export function MenuList({ items, onClose }: { items: MenuEntry[]; onClose: () =
 export function moveFocus(e: React.KeyboardEvent<HTMLElement>): void {
   if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
   e.preventDefault();
+  e.stopPropagation(); // Untermenüs liegen im Startmenü – nicht beide Listen bewegen
   const buttons = [...e.currentTarget.querySelectorAll<HTMLButtonElement>(':scope > li > button:not(:disabled)')];
   const i = buttons.indexOf(document.activeElement as HTMLButtonElement);
   const next = e.key === 'ArrowDown' ? (i + 1) % buttons.length : (i - 1 + buttons.length) % buttons.length;

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MenuList, moveFocus, type MenuEntry } from './components/Menu';
+import { AccelLabel, accelOf, menuKeys, MenuList, type MenuEntry } from './components/Menu';
 import { PixelIcon, type IconName } from './icons';
 
 interface Folder {
@@ -34,13 +34,14 @@ export function StartMenu({ folders, items, onClose }: StartMenuProps) {
       <div className="stripe">
         <b>Kaiser-Klon</b> 98
       </div>
-      <ul onKeyDown={moveFocus}>
+      <ul onKeyDown={menuKeys}>
         {folders.map((f) => (
           <li key={f.key} role="none" className="folder" onMouseEnter={() => setOpenKey(f.key)}>
             <button
               role="menuitem"
               aria-haspopup="menu"
               aria-expanded={openKey === f.key}
+              data-accel={accelOf(f.label)}
               className={openKey === f.key ? 'open' : ''}
               onClick={() => (openKey === f.key ? setOpenKey(null) : focusSub(f.key))}
               onKeyDown={(e) => {
@@ -51,7 +52,9 @@ export function StartMenu({ folders, items, onClose }: StartMenuProps) {
               }}
             >
               <PixelIcon name={f.icon} size={24} />
-              <span style={{ flex: 1 }}>{f.label}</span>
+              <span style={{ flex: 1 }}>
+                <AccelLabel label={f.label} />
+              </span>
               <span className="arrow">▶</span>
             </button>
             {openKey === f.key && (
@@ -79,13 +82,14 @@ export function StartMenu({ folders, items, onClose }: StartMenuProps) {
             <li key={i} role="none" onMouseEnter={() => setOpenKey(null)}>
               <button
                 role="menuitem"
+                data-accel={accelOf(it.label)}
                 onClick={() => {
                   onClose();
                   it.onClick();
                 }}
               >
                 {it.icon && <PixelIcon name={it.icon} size={24} />}
-                {it.label}
+                <AccelLabel label={it.label} />
               </button>
             </li>
           ),

@@ -7,6 +7,7 @@ import { Desktop } from './Desktop';
 import { GameOver } from './screens/GameOver';
 import { Handover } from './screens/Handover';
 import { Resolving } from './screens/Resolving';
+import { ScreensaverHost } from './Screensaver';
 import { Setup } from './screens/Setup';
 import { autosave } from './storage';
 
@@ -109,6 +110,7 @@ export function App() {
       {content}
       {error && <Alert title="Kaiser-Klon" text={error} severity="error" onOk={() => setError(null)} />}
       <TooltipLayer />
+      <ScreensaverHost />
     </>
   );
 }

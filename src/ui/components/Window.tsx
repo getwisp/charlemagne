@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { PixelIcon, type IconName } from '../icons';
+import { playSound } from '../sound';
 
 interface WindowProps {
   title: string;
@@ -133,7 +134,11 @@ interface AlertProps {
 /** Klassische Windows-Alert-Box für Herold-Meldungen. */
 export function Alert({ title, text, severity = 'info', onOk, extra, counter }: AlertProps) {
   const okRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => okRef.current?.focus(), [title, text]);
+  useEffect(() => {
+    okRef.current?.focus();
+    if (severity === 'error') playSound('chord');
+    else if (severity === 'warning') playSound('ding');
+  }, [title, text, severity]);
   return (
     <Modal title={title} width={440}>
       <div className="alert-body">

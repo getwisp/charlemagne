@@ -443,6 +443,21 @@ table.kv tr.sum td {
   line-height: 1.35;
 }
 
+/* ------------------------------------------------------------------ Bildschirmschoner */
+.screensaver {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: #000;
+  cursor: none;
+}
+
+/* ------------------------------------------------------------------ Sanduhr */
+body.busy,
+body.busy * {
+  cursor: var(--cursor-wait, wait) !important;
+}
+
 /* ------------------------------------------------------------------ Fortschritt */
 .progress {
   height: 16px;
@@ -792,6 +807,25 @@ table.kv tr.sum td {
   border: 10px solid var(--face);
   box-shadow: inset 1px 1px var(--dark), inset -1px -1px var(--light), 0 0 0 1px var(--shadow), 2px 2px 0 1px var(--dark);
   position: relative;
+}
+
+.monitor-stars {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(#fff 1px, transparent 1px), radial-gradient(#888 1px, transparent 1px);
+  background-size: 23px 19px, 13px 17px;
+  background-position: 3px 5px, 9px 2px;
+}
+
+.monitor-crest {
+  position: absolute;
+  left: 20px;
+  top: 14px;
+}
+
+.monitor-crest.second {
+  left: 104px;
+  top: 52px;
 }
 
 .monitor-window {

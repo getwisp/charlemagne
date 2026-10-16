@@ -3,10 +3,16 @@ import { GroupBox, n } from '../components/controls';
 import { Modal } from '../components/Window';
 import { clearAutosave, downloadSave } from '../storage';
 import { PixelIcon } from '../icons';
+import { playSound } from '../sound';
+import { useEffect } from 'react';
 
 export function GameOver({ state, onNewGame }: { state: GameState; onNewGame: () => void }) {
   const ranking = rankPlayers(state);
   const winner = state.players.find((p) => p.id === state.winnerId);
+  useEffect(() => {
+    // Ein menschlicher Sieger bekommt die Fanfare, sonst nur das Glöckchen.
+    playSound(winner && !winner.isAI ? 'fanfare' : 'ding');
+  }, [winner]);
   return (
     <Modal title="Spielende" icon="throne" width={560} opaque>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>

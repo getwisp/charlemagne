@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 export function GroupBox({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -9,11 +9,20 @@ export function GroupBox({ label, children }: { label: string; children: ReactNo
   );
 }
 
+const BLOCK = 10; // Blockbreite inkl. Lücke, passend zum Streifenmuster in .progress-fill
+
+/** Win95-Fortschrittsbalken: füllt sich in ganzen Blöcken. */
 export function Progress({ value, done }: { value: number; done?: boolean }) {
   const pct = Math.max(0, Math.min(1, value)) * 100;
+  const ref = useRef<HTMLDivElement>(null);
+  const [inner, setInner] = useState(0);
+  useLayoutEffect(() => {
+    if (ref.current) setInner(ref.current.clientWidth - 4);
+  }, []);
+  const width = inner > 0 ? (pct >= 100 ? inner : Math.floor(((pct / 100) * inner) / BLOCK) * BLOCK) : undefined;
   return (
-    <div className="progress sunken" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
-      <div className={`progress-fill ${done ? 'done' : ''}`} style={{ width: `${pct}%` }} />
+    <div ref={ref} className="progress sunken" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
+      <div className={`progress-fill ${done ? 'done' : ''}`} style={{ width: width ?? `${pct}%` }} />
     </div>
   );
 }

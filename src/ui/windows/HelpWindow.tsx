@@ -43,8 +43,9 @@ export function HelpWindow() {
         <li>Doppelklick auf ein Symbol öffnet es (am Handy genügt ein Tipp). Pfeiltasten wählen ein Symbol, <b>Enter</b> öffnet es.</li>
         <li>Doppelklick auf die Titelleiste maximiert ein Fenster. Rechtsklick auf Desktop oder Taskleiste ordnet die Fenster an; unter „Eigenschaften" wählt Ihr die Hintergrundfarbe.</li>
         <li>
-          <b>F2</b> – Boss-Taste (Tabellenkalkulation). <b>Esc</b> – zurück bzw. Menü schließen.
+          <b>Strg+Esc</b> – Startmenü. In Menüs löst der unterstrichene Buchstabe den Eintrag aus. <b>F2</b> – Boss-Taste (Tabellenkalkulation). <b>Esc</b> – zurück bzw. Menü schließen.
         </li>
+        <li>Klänge sind anfangs aus; der Lautsprecher in der Taskleiste schaltet sie ein. Den Bildschirmschoner stellt Ihr unter Rechtsklick → Eigenschaften ein.</li>
       </ul>
       <h4>Danksagung</h4>
       <p>
