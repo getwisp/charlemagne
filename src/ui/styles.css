@@ -76,6 +76,9 @@ textarea {
 .groupbox > legend {
   padding: 0 3px;
   margin-left: -2px;
+  /* Deckt die eingravierte Lichtkante des Rahmens ab, die sonst durch den Text läuft. */
+  position: relative;
+  background: var(--face);
 }
 
 hr.etched {
