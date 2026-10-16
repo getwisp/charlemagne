@@ -433,6 +433,13 @@ describe('Diplomatie', () => {
     expect(planAiTurn(s, 'p2').players[1].justice).toBe(3);
   });
 
+  it('Kirchenfürst regiert bis zum Kurfürsten gerecht, danach milde', () => {
+    const s = newGame({ seed: 4, players: [{ name: 'A', isAI: false }, { name: 'B', isAI: true, archetype: 'kirchenfuerst' }] });
+    expect(planAiTurn(s, 'p2').players[1].justice).toBe(3);
+    s.players[1].title = T.KURFUERST;
+    expect(planAiTurn(s, 'p2').players[1].justice).toBe(2);
+  });
+
   it('KI greift Vertragspartner nicht an und beantwortet Angebote', () => {
     let s = newGame({
       seed: 9,

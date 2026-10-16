@@ -258,7 +258,9 @@ function setPolicies(s: GameState, p: Player, w: Weights): void {
     }),
   );
   // Vor der Krone die Richter zügeln: strenge Justiz bringt Hexenprozesse, und Skandale kosten Bischofsstimmen.
-  const justice = p.title >= CROWN_CAUTION_TITLE ? Math.min(3, ARCHETYPES[arch].justice) : ARCHETYPES[arch].justice;
+  let justice = p.title >= CROWN_CAUTION_TITLE ? Math.min(3, ARCHETYPES[arch].justice) : ARCHETYPES[arch].justice;
+  // Der Kirchenfürst regiert bis zum Kurfürsten gerecht (weniger Kriminalität), erst dann milde (Frömmigkeit, Pilger).
+  if (arch === 'kirchenfuerst' && p.title < CROWN_CAUTION_TITLE) justice = Math.max(justice, 3);
   attempt(() => mut.setJustice(s, p.id, justice));
   void w;
 }
