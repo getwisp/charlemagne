@@ -117,3 +117,78 @@ it.runIf(process.env.SIM_INCOME)('Einnahmen-Aufschlüsselung je Archetyp', async
     );
   }
 });
+
+// Wirtschaftsverlauf je Archetyp in Zehnjahres-Schnappschüssen: SIM_DECADES=240 npm run sim:econ
+it.runIf(process.env.SIM_DECADES)('Wirtschaftsverlauf je Archetyp (Jahrzehnte)', async () => {
+  const { mut, previewEconomy, score, cityCount, totalDebt, tradeAgreementCount, BUILDINGS } = await import('../src/engine');
+  const SEEDS = Number(process.env.SIM_DECADES) || 30;
+  const SNAP = [1710, 1720, 1730, 1740, 1750, 1760, 1770];
+  // kumulierte Ausgaben/Einnahmen je Archetyp (laufende Partie)
+  const flowKeys = ['build', 'land', 'army', 'covert', 'bribe', 'tributePaid', 'tributeGot'] as const;
+  type F = (typeof flowKeys)[number];
+  const snapKeys = ['n', 'score', 'title', 'worth', 'cash', 'income', 'incomeTax', 'trade', 'tradeBonus', 'cityBonus', 'pilgrims', 'crime', 'upkeepMil', 'upkeepBld', 'pop', 'landHa', 'buildings', 'cities', 'cathedrals', 'treaties', 'taxRate', ...flowKeys] as const;
+  type K = (typeof snapKeys)[number];
+  const agg: Record<number, Record<string, Record<K, number>>> = Object.fromEntries(SNAP.map((y) => [y, Object.fromEntries(ARCHS.map((a) => [a, Object.fromEntries(snapKeys.map((k) => [k, 0])) as Record<K, number>]))]));
+  let flows: Record<string, Record<F, number>> = {};
+  let current: { players: { id: string; name: string }[] } | null = null;
+  const nameOf = (id: string) => current!.players.find((p) => p.id === id)!.name;
+  const orig = { build: mut.build, buyLand: mut.buyLand, acceptOffer: mut.acceptOffer };
+  mut.build = (s, pid, t, c = 1) => { orig.build(s, pid, t, c); flows[nameOf(pid)].build += BUILDINGS[t].cost * c; };
+  mut.buyLand = (s, pid, n) => { orig.buyLand(s, pid, n); flows[nameOf(pid)].land += Math.floor(n) * s.market.landPrice; };
+  mut.acceptOffer = (s, pid, id) => {
+    const o = (s.offers ?? []).find((x) => x.id === id);
+    orig.acceptOffer(s, pid, id);
+    if (o && o.gold) { flows[nameOf(o.from)].tributePaid += o.gold; flows[nameOf(pid)].tributeGot += o.gold; }
+  };
+  try {
+    for (let seed = 1; seed <= SEEDS; seed++) {
+      let s = newGame({ seed, endYear: 1820, players: ARCHS.map((a) => ({ name: a, isAI: true, archetype: a })) });
+      flows = Object.fromEntries(ARCHS.map((a) => [a, Object.fromEntries(flowKeys.map((k) => [k, 0])) as Record<F, number>]));
+      while (s.phase === 'orders') {
+        current = s;
+        for (const p of s.players) { s = planAiTurn(s, p.id); current = s; }
+        for (const a of s.queue) {
+          const from = nameOf(a.from);
+          if (a.kind === 'covert') flows[from].covert += a.gold;
+          if (a.kind === 'bribe') flows[from].bribe += a.gold;
+        }
+        for (const p of s.players) flows[p.name].army += militaryUpkeep(p);
+        if (SNAP.includes(s.year)) {
+          for (const p of s.players) {
+            const r = agg[s.year][p.name];
+            const e = previewEconomy(s, p);
+            r.n++; r.score += score(p); r.title += p.title;
+            r.worth += p.gold + p.savings - totalDebt(p); r.cash += p.gold;
+            r.income += e.taxIncome + e.pilgrimIncome; r.incomeTax += e.taxes.incomeTax; r.trade += e.taxes.salesTax + e.taxes.tolls;
+            r.tradeBonus += e.taxes.tradeBonus; r.cityBonus += e.taxes.cityBonus; r.pilgrims += e.pilgrimIncome; r.crime += e.taxes.crimeLoss;
+            r.upkeepMil += e.militaryUpkeep; r.upkeepBld += e.buildingUpkeep;
+            r.pop += p.population; r.landHa += p.land;
+            r.buildings += Object.values(p.buildings).reduce((x, y) => x + y, 0); r.cities += cityCount(p.buildings); r.cathedrals += p.buildings.cathedral;
+            r.treaties += tradeAgreementCount(s, p.id); r.taxRate += p.taxes.income;
+            for (const k of flowKeys) r[k] += flows[p.name][k];
+          }
+        }
+        s = resolveYear(s);
+        current = s;
+        s.messages = {};
+      }
+    }
+  } finally {
+    Object.assign(mut, orig);
+  }
+  const k = (v: number) => (Math.abs(v) >= 10000 ? `${(v / 1000).toFixed(0)}k` : Math.round(v).toLocaleString('de-DE'));
+  const short = { pfeffersack: 'Pfeffersack', kriegstreiber: 'Kriegstreiber', raenkeschmiedin: 'Ränkeschm.', kirchenfuerst: 'Kirchenfürst' } as Record<string, string>;
+  for (const y of SNAP) {
+    const n = agg[y].pfeffersack.n;
+    if (!n) continue;
+    console.log(`\n== Anno ${y} (${n} laufende Partien) – Bestand und Jahreseinkommen je Archetyp, Ausgaben kumuliert seit 1700`);
+    console.log('Archetyp       Punkte Titel Vermögen  Bürger   Land  Geb. Städte Kath. | Eink./J  Eink.st Handel (dv. Vertr.) Stadtb. Pilger Krim. | Sold/J Bau-Unt/J | Σ Bauten Σ Land  Σ Sold  Σ Tavern Σ Bestech Tribut gez./erh. | Handelsv. Eink.-Satz');
+    for (const a of ARCHS) {
+      const r = agg[y][a];
+      const m = (key: K) => r[key] / r.n;
+      console.log(
+        `${short[a].padEnd(13)} ${k(m('score')).padStart(6)} ${m('title').toFixed(1).padStart(5)} ${k(m('worth')).padStart(8)} ${k(m('pop')).padStart(7)} ${k(m('landHa')).padStart(6)} ${m('buildings').toFixed(0).padStart(5)} ${m('cities').toFixed(1).padStart(6)} ${m('cathedrals').toFixed(1).padStart(5)} | ${k(m('income')).padStart(7)} ${k(m('incomeTax')).padStart(8)} ${k(m('trade')).padStart(6)} (${k(m('tradeBonus')).padStart(5)}) ${k(m('cityBonus')).padStart(9)} ${k(m('pilgrims')).padStart(6)} ${k(-m('crime')).padStart(6)} | ${k(m('upkeepMil')).padStart(6)} ${k(m('upkeepBld')).padStart(9)} | ${k(m('build')).padStart(8)} ${k(m('land')).padStart(6)} ${k(m('army')).padStart(7)} ${k(m('covert')).padStart(8)} ${k(m('bribe')).padStart(8)} ${k(m('tributePaid')).padStart(7)}/${k(m('tributeGot')).padEnd(7)} | ${m('treaties').toFixed(1).padStart(9)} ${m('taxRate').toFixed(0).padStart(6)} %`,
+      );
+    }
+  }
+});
