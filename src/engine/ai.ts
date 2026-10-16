@@ -156,9 +156,19 @@ function runawayLeader(s: GameState, p: Player): Player | null {
   return leader && leader.id !== p.id && score(leader) > score(p) * 1.2 ? leader : null;
 }
 
-/** Mitgift, ab der eine KI auch ungeliebte Verträge unterschreibt (wächst mit ihrem Rang). */
-export function aiTributeDemand(p: Player): number {
-  return Math.round((1000 + score(p) * 0.02) / 100) * 100;
+/** Aufschlag auf das Schutzgeld, wenn der Bittsteller die Rangliste anführt. */
+export const LEADER_TRIBUTE_FACTOR = 3;
+
+/**
+ * Mitgift, ab der eine KI auch ungeliebte Verträge unterschreibt. Sie richtet sich nach
+ * dem Reicheren der beiden – der wohlhabendste Fürst zahlt am meisten – und der
+ * Führende der Rangliste zahlt ein Vielfaches.
+ */
+export function aiTributeDemand(s: GameState, p: Player, from: Player): number {
+  const base = 1000 + Math.max(score(p), score(from)) * 0.02;
+  const leader = [...s.players].sort((a, b) => score(b) - score(a))[0];
+  const factor = leader.id === from.id ? LEADER_TRIBUTE_FACTOR : 1;
+  return Math.round((base * factor) / 100) * 100;
 }
 
 /** Würde die KI dieses Angebot annehmen? Öffentlich: auch für die Vorschau im Thronsaal nutzbar. */
@@ -166,7 +176,7 @@ export function aiAcceptsOffer(s: GameState, p: Player, from: Player, type: Trea
   const hostile = (p.grudges[from.id] ?? 0) >= 40 || p.casusBelli.includes(from.id);
   if (hostile) return false;
   const runaway = runawayLeader(s, p)?.id === from.id;
-  const sweetener = gold >= aiTributeDemand(p);
+  const sweetener = gold >= aiTributeDemand(s, p, from);
   switch (type) {
     case 'nap':
       // Der Kriegstreiber bindet sich ungern – außer gegen gutes Geld oder einen übermächtigen Nachbarn.
@@ -209,7 +219,7 @@ function diplomacy(s: GameState, p: Player): void {
     const strongest = friendly.filter((o) => canOffer(o, 'nap')).sort((a, b) => publicArmyEstimate(b) - publicArmyEstimate(a))[0];
     if (strongest && publicArmyEstimate(strongest) > defensePower(p) * 0.5) {
       // Frieden mit einem Kriegstreiber gibt es nur gegen Tribut – wenn die Kasse ihn hergibt.
-      const tribute = strongest.archetype === 'kriegstreiber' ? aiTributeDemand(strongest) : 0;
+      const tribute = strongest.archetype === 'kriegstreiber' ? aiTributeDemand(s, strongest, p) : 0;
       if (tribute <= budget(p) * 0.3) {
         fund(s, p, tribute);
         if (attempt(() => mut.offerTreaty(s, p.id, strongest.id, 'nap', tribute))) return;
@@ -649,8 +659,8 @@ function opportunisticBreach(s: GameState, p: Player): boolean {
     )
     .map((o) => ({ o, ratio: attackPower(p, fraction, o.id) / Math.max(1, estimatedDefense(s, p, o)) }))
     .filter((c) => c.ratio > profile.margin)
-    // Die Ränkeschmiedin verrät bevorzugt den Führenden, der Kriegstreiber den Schwächsten.
-    .sort((a, b) => (p.archetype === 'raenkeschmiedin' ? score(b.o) - score(a.o) : b.ratio - a.ratio));
+    // Unter allen sicheren Opfern lockt die reichste Beute (höchster Punktestand).
+    .sort((a, b) => score(b.o) - score(a.o));
   const victim = candidates[0];
   if (!victim || !chance(s, profile.chance)) return false;
   return attempt(() => mut.queueAttack(s, p.id, victim.o.id, fraction));
