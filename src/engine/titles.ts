@@ -1,4 +1,4 @@
-import { REQUIREMENT_LABELS, T, TITLES, TITLE_REQUIREMENTS, type TitleRequirements } from './constants';
+import { einesTitels, REQUIREMENT_LABELS, T, TITLE_REQUIREMENTS, zumTitel, type TitleRequirements } from './constants';
 import { cityCount } from './economy';
 import type { GameState, Player } from './types';
 import { chronicle, tell } from './util';
@@ -59,8 +59,8 @@ export function canBePromoted(p: Player): boolean {
 export function demote(s: GameState, p: Player, reason: string): void {
   if (p.title <= T.EDLER) return;
   p.title -= 1;
-  tell(s, p.id, 'Rückstufung', `${reason} Ihr werdet zum ${TITLES[p.title]} zurückgestuft.`, 'error');
-  chronicle(s, `${p.name} wurde zum ${TITLES[p.title]} zurückgestuft (${reason})`);
+  tell(s, p.id, 'Rückstufung', `${reason} Ihr werdet ${zumTitel(p.title, p.female)} zurückgestuft.`, 'error');
+  chronicle(s, `${p.name} wurde ${zumTitel(p.title, p.female)} zurückgestuft (${reason})`);
 }
 
 /** Prüft Beförderungen (max. 1 pro Runde) und Degradierung durch massiven Landverlust. */
@@ -73,8 +73,8 @@ export function checkTitles(s: GameState): void {
     if (canBePromoted(p)) {
       p.title += 1;
       p.lastPromotionYear = s.year;
-      tell(s, p.id, 'Beförderung!', `Der Kaiser erhebt Euch in den Stand eines ${TITLES[p.title]}!`, 'good');
-      chronicle(s, `${p.name} wurde zum ${TITLES[p.title]} erhoben.`);
+      tell(s, p.id, 'Beförderung!', `Der Kaiser erhebt Euch in den Stand ${einesTitels(p.title, p.female)}!`, 'good');
+      chronicle(s, `${p.name} wurde ${zumTitel(p.title, p.female)} erhoben.`);
       if (p.title === T.GRAF)
         tell(s, p.id, 'Ritterschlag', 'Als Graf dürft Ihr nun Knappen zu Rittern schlagen.', 'info');
     }

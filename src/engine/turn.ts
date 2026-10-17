@@ -3,7 +3,7 @@
 //   (Dashboard-Phase: Spieler geben Befehle, KI plant ihren Zug)
 //   resolveYear → Intrigen, Kriege, Reichstag, Wirtschaft, Bank, Titel → beginYear
 
-import { ARCHETYPES, DEFAULT_TAXES, GRUDGE, PLAYER_COLORS, RAT_MAX, RAT_MIN, START_VALUES, TITLES } from './constants';
+import { ARCHETYPES, DEFAULT_TAXES, GRUDGE, PLAYER_COLORS, RAT_MAX, RAT_MIN, START_VALUES, titleName } from './constants';
 import { calculateEconomyTurn, expectedHarvest, grainNeed, score } from './economy';
 import { processBanking, resolveInsolvency } from './bank';
 import { resolveCovert } from './covert';
@@ -23,6 +23,8 @@ export interface PlayerSetup {
   name: string;
   isAI: boolean;
   archetype?: Archetype;
+  /** Weibliche Titelformen */
+  female?: boolean;
 }
 
 export interface NewGameOptions {
@@ -42,6 +44,7 @@ function createPlayer(setup: PlayerSetup, index: number): Player {
     color: PLAYER_COLORS[index % PLAYER_COLORS.length],
     isAI: setup.isAI,
     archetype,
+    female: setup.female ?? false,
     title: 0,
     gold: START_VALUES.gold,
     grain: START_VALUES.grain,
@@ -235,7 +238,7 @@ export function resolveYear(state: GameState): GameState {
     const ranking = rankPlayers(s);
     s.phase = 'ended';
     s.winnerId = ranking[0].id;
-    s.endReason = `Das Jahr ${s.settings.endYear} ist erreicht. ${ranking[0].name} (${TITLES[ranking[0].title]}) führt die Rangliste an.`;
+    s.endReason = `Das Jahr ${s.settings.endYear} ist erreicht. ${ranking[0].name} (${titleName(ranking[0].title, ranking[0].female)}) führt die Rangliste an.`;
     chronicle(s, s.endReason);
   }
 

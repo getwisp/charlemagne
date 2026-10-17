@@ -3,7 +3,7 @@
 // zugestellt; der Empfänger antwortet in seinem nächsten Zug. Verträge laufen
 // fest TREATY_YEARS Jahre – wer früher raus will, muss sie brechen.
 
-import { GRUDGE, TREATIES, TREATY_YEARS, TITLES } from './constants';
+import { GRUDGE, TREATIES, TREATY_YEARS, titleName } from './constants';
 import { calculateEconomyTurn, type EconomyPreview } from './economy';
 import type { GameState, OfferAction, Player, Treaty, TreatyOffer, TreatyType } from './types';
 import { chronicle, fmt, getPlayer, nextId, tell } from './util';
@@ -87,7 +87,7 @@ export function breakTreaties(s: GameState, breaker: Player, victim: Player, rea
       p.grudges[breaker.id] = (p.grudges[breaker.id] ?? 0) + GRUDGE.treatyBreach;
     }
     tell(s, breaker.id, 'Vertragsbruch', `Ihr habt mit dem Angriff auf ${victim.name} ${names} gebrochen. Die Kirchenfürsten sind empört (Skandal), und kein Herrscher wird Euer Wort so bald vergessen.`, 'warning');
-    tell(s, victim.id, 'Verrat!', `${breaker.name} hat ${names} gebrochen und Euch überfallen. Ihr habt einen Casus Belli gegen den Wortbrüchigen.`, 'error');
+    tell(s, victim.id, 'Verrat!', `${breaker.name} hat ${names} gebrochen und Euch überfallen. Ihr habt einen Casus Belli gegen ${breaker.female ? 'die Wortbrüchige' : 'den Wortbrüchigen'}.`, 'error');
     chronicle(s, `Wortbruch: ${breaker.name} bricht ${names} mit ${victim.name}.`);
   } else {
     tell(s, breaker.id, 'Vertrag aufgelöst', `Nach der Enttarnung Eures Agenten hat ${victim.name} ${names} aufgelöst.`, 'warning');
@@ -116,7 +116,7 @@ export function processOffers(s: GameState): void {
       s,
       a.to,
       'Ein Gesandter bittet um Audienz',
-      `${TITLES[from.title]} ${from.name} bietet Euch ${TREATIES[a.treatyType].einen} ${TREATIES[a.treatyType].name} für ${TREATY_YEARS} Jahre an${a.gold ? ` – mit einer Mitgift von ${fmt(a.gold)} Talern` : ''}. Antwortet im Thronsaal (Diplomatie).`,
+      `${titleName(from.title, from.female)} ${from.name} bietet Euch ${TREATIES[a.treatyType].einen} ${TREATIES[a.treatyType].name} für ${TREATY_YEARS} Jahre an${a.gold ? ` – mit einer Mitgift von ${fmt(a.gold)} Talern` : ''}. Antwortet im Thronsaal (Diplomatie).`,
       'info',
     );
   }

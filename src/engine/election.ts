@@ -12,7 +12,7 @@ import {
   ELECTION_MAJORITY,
   ELECTION_SEATS,
   T,
-  TITLES,
+  titleName,
 } from './constants';
 import { piety } from './economy';
 import { randFloat } from './rng';
@@ -61,7 +61,7 @@ export function maybeCallElection(s: GameState): void {
 }
 
 export function seatLabel(s: GameState, seat: ElectionSeat): string {
-  return seat.kind === 'bishop' ? seat.name : `${getPlayer(s, seat.playerId).name} (${TITLES[getPlayer(s, seat.playerId).title]})`;
+  return seat.kind === 'bishop' ? seat.name : `${getPlayer(s, seat.playerId).name} (${titleName(getPlayer(s, seat.playerId).title, getPlayer(s, seat.playerId).female)})`;
 }
 
 function bribesFor(bribes: BribeAction[], seat: number, candidate: string): number {

@@ -1,4 +1,4 @@
-import { rankPlayers, score, TITLES, type GameState } from '../../engine';
+import { rankPlayers, score, titleName, type GameState } from '../../engine';
 import { GroupBox, n } from '../components/controls';
 import { Modal } from '../components/Window';
 import { clearAutosave, downloadSave } from '../storage';
@@ -42,7 +42,7 @@ export function GameOver({ state, onNewGame }: { state: GameState; onNewGame: ()
                   <td style={{ color: p.color, fontWeight: 'bold' }}>
                     {p.name} {p.isAI ? '(KI)' : ''}
                   </td>
-                  <td>{TITLES[p.title]}</td>
+                  <td>{titleName(p.title, p.female)}</td>
                   <td className="num">{n(p.land)}</td>
                   <td className="num">{n(p.population)}</td>
                   <td className="num">{n(score(p))}</td>

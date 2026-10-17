@@ -20,7 +20,7 @@ import {
   marchCost,
   publicArmyEstimate,
   T,
-  TITLES,
+  titleName,
   UNITS,
   type DismissableUnit,
   type RecruitableUnit,
@@ -82,7 +82,7 @@ function Troops() {
                     <b>{def.plural}</b>
                     {u === 'guards' && <div className="muted">Garde · bleibt daheim</div>}
                     {u === 'knights' && <div className="muted">nur per Ritterschlag</div>}
-                    {locked && u !== 'knights' && <div className="muted">ab {TITLES[def.minTitle]}</div>}
+                    {locked && u !== 'knights' && <div className="muted">ab {titleName(def.minTitle, me.female)}</div>}
                   </td>
                   <td className="num">{n(me.military[u])}</td>
                   <td className="num">{u === 'knights' ? '–' : n(def.cost)}</td>
@@ -200,7 +200,7 @@ function Campaign() {
           <select className="input" value={target} onChange={(e) => setTarget(e.target.value)} aria-label="Angriffsziel">
             {rivals.map((r) => (
               <option key={r.id} value={r.id}>
-                {TITLES[r.title]} {r.name}
+                {titleName(r.title, r.female)} {r.name}
                 {me.casusBelli.includes(r.id) ? ' – Casus Belli!' : ''}
               </option>
             ))}

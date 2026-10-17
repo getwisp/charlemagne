@@ -1,4 +1,4 @@
-import { TITLES, type GameState, type Player } from '../../engine';
+import { titleName, type GameState, type Player } from '../../engine';
 import { Modal } from '../components/Window';
 import { PixelIcon } from '../icons';
 
@@ -14,7 +14,7 @@ export function Handover({ state, player, onReady }: { state: GameState; player:
             Anno <b>{state.year}</b>. Bitte übergebt den Rechner an:
           </p>
           <p style={{ fontSize: 15, fontWeight: 'bold', color: player.color }}>
-            {TITLES[player.title]} {player.name}
+            {titleName(player.title, player.female)} {player.name}
           </p>
           <p className="hint">Andere Spieler sollten jetzt wegsehen. {unread > 0 && `Der Herold hat ${unread} Meldung(en) für Euch.`}</p>
         </div>

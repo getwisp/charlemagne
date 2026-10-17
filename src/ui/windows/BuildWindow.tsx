@@ -10,7 +10,7 @@ import {
   cityCount,
   freeLand,
   HECTARES_PER_BUILDING,
-  TITLES,
+  titleName,
   type BuildingType,
 } from '../../engine';
 import { GroupBox, n, Progress } from '../components/controls';
@@ -50,7 +50,7 @@ export function BuildWindow() {
                 <tr key={t}>
                   <td>
                     <b>{def.name}</b>
-                    {locked && <div className="muted">ab {TITLES[def.minTitle]}</div>}
+                    {locked && <div className="muted">ab {titleName(def.minTitle, me.female)}</div>}
                   </td>
                   <td className="num">{me.buildings[t]}</td>
                   <td className="num">{n(def.cost)}</td>

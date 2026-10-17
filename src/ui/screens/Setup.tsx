@@ -10,9 +10,13 @@ interface Slot {
   type: SlotType;
   name: string;
   archetype: Archetype;
+  /** Weibliche Titelformen (Gräfin, Königin …) */
+  female: boolean;
 }
 
 const DEFAULT_NAMES = ['Carolus Magnus', 'Hanse von Lübeck', 'Albrecht von Wallenstein', 'Caterina de Medici', 'Clemens von Würzburg', 'Sophie von Hannover', 'August von Sachsen', 'Max von Bayern', 'Luise von Preußen'];
+// Voreingestellte Figuren: Caterina, Sophie und Luise führen weibliche Titel.
+const DEFAULT_FEMALE = [false, false, false, true, false, true, false, false, true];
 const ARCH_ORDER: Archetype[] = ['pfeffersack', 'kriegstreiber', 'raenkeschmiedin', 'kirchenfuerst'];
 
 function defaultSlots(): Slot[] {
@@ -20,6 +24,7 @@ function defaultSlots(): Slot[] {
     type: i === 0 ? 'human' : i < 5 ? 'ai' : 'none',
     name,
     archetype: ARCH_ORDER[(i + 3) % 4],
+    female: DEFAULT_FEMALE[i],
   }));
 }
 
@@ -40,7 +45,7 @@ export function Setup({ onStart, onLoad }: { onStart: (p: PlayerSetup[], endYear
     if (active.some((s) => !s.name.trim())) return setError('Jeder Spieler braucht einen Namen.');
     const parsed = seed.trim() ? Number.parseInt(seed, 10) : undefined;
     onStart(
-      active.map((s) => ({ name: s.name.trim(), isAI: s.type === 'ai', archetype: s.type === 'ai' ? s.archetype : undefined })),
+      active.map((s) => ({ name: s.name.trim(), isAI: s.type === 'ai', archetype: s.type === 'ai' ? s.archetype : undefined, female: s.female })),
       endYear,
       Number.isFinite(parsed) ? parsed : undefined,
     );
@@ -74,6 +79,7 @@ export function Setup({ onStart, onLoad }: { onStart: (p: PlayerSetup[], endYear
               <tr>
                 <th>#</th>
                 <th>Typ</th>
+                <th>Titelform</th>
                 <th>Name</th>
                 <th>Persönlichkeit (KI)</th>
               </tr>
@@ -90,7 +96,20 @@ export function Setup({ onStart, onLoad }: { onStart: (p: PlayerSetup[], endYear
                     </select>
                   </td>
                   <td>
-                    <input className="input" value={s.name} disabled={s.type === 'none'} onChange={(e) => update(i, { name: e.target.value })} style={{ width: 190 }} aria-label={`Name Spieler ${i + 1}`} />
+                    <select
+                      className="input"
+                      value={s.female ? 'f' : 'm'}
+                      disabled={s.type === 'none'}
+                      onChange={(e) => update(i, { female: e.target.value === 'f' })}
+                      title="Titelform: Graf oder Gräfin, König oder Königin …"
+                      aria-label={`Titelform Spieler ${i + 1}`}
+                    >
+                      <option value="m">Graf</option>
+                      <option value="f">Gräfin</option>
+                    </select>
+                  </td>
+                  <td>
+                    <input className="input" value={s.name} disabled={s.type === 'none'} onChange={(e) => update(i, { name: e.target.value })} style={{ width: 170 }} aria-label={`Name Spieler ${i + 1}`} />
                   </td>
                   <td>
                     {s.type === 'ai' && (

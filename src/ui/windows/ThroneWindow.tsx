@@ -8,6 +8,7 @@ import {
   seatLabel,
   T,
   TITLES,
+  titleName,
   TREATIES,
   TREATY_YEARS,
   ALLIANCE_SHARE,
@@ -57,7 +58,7 @@ function TitleTab() {
   return (
     <div>
       <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 8 }}>
-        {TITLES.map((t, i) => (
+        {TITLES.map((_, i) => titleName(i, me.female)).map((t, i) => (
           <span
             key={t}
             className={i === me.title ? 'raised' : 'sunken'}
@@ -68,10 +69,10 @@ function TitleTab() {
         ))}
       </div>
       <div>
-        <b>{me.regentName}</b>, {TITLES[me.title]} – {me.name}. Frömmigkeit: {piety(me)} · Skandale: {me.scandals}
+        <b>{me.regentName}</b>, {titleName(me.title, me.female)} – {me.name}. Frömmigkeit: {piety(me)} · Skandale: {me.scandals}
       </div>
       {reqs.length > 0 ? (
-        <GroupBox label={`Voraussetzungen für ${TITLES[me.title + 1]} (alle gleichzeitig)`}>
+        <GroupBox label={`Voraussetzungen für ${titleName(me.title + 1, me.female)} (alle gleichzeitig)`}>
           {reqs.map((r) => (
             <div key={r.key} style={{ display: 'grid', gridTemplateColumns: '110px 1fr 130px', gap: 6, alignItems: 'center', marginBottom: 3 }}>
               <span>
@@ -129,7 +130,7 @@ function RivalsTab() {
                   <span style={{ color: p.id === me.id ? undefined : p.color, fontWeight: 'bold' }}>{p.name}</span> {p.isAI ? <span className="muted">(KI)</span> : ''}
                   {p.status && <span className="neg"> [{p.status}]</span>}
                 </td>
-                <td>{TITLES[p.title]}</td>
+                <td>{titleName(p.title, p.female)}</td>
                 <td className="num">{n(p.land)}</td>
                 <td className="num">{n(p.population)}</td>
                 <td className="num">
@@ -201,7 +202,7 @@ function DiplomacyTab() {
               {rivals.map((r) => (
                 <tr key={r.id}>
                   <td>
-                    <span style={{ color: r.color, fontWeight: 'bold' }}>{r.name}</span> <span className="muted">{TITLES[r.title]}</span>
+                    <span style={{ color: r.color, fontWeight: 'bold' }}>{r.name}</span> <span className="muted">{titleName(r.title, r.female)}</span>
                   </td>
                   <td>
                     {treatiesBetween(state, me.id, r.id).length === 0 ? (
@@ -261,7 +262,7 @@ function DiplomacyTab() {
           <select className="input" value={to} onChange={(e) => setTo(e.target.value)} aria-label="Empfänger">
             {rivals.map((r) => (
               <option key={r.id} value={r.id}>
-                {TITLES[r.title]} {r.name}
+                {titleName(r.title, r.female)} {r.name}
               </option>
             ))}
           </select>

@@ -75,7 +75,7 @@ describe('KI-Simulation', () => {
       const intrigues = s.chronicle.filter((c) => /Spion|Attentat|Anschlag/.test(c.text)).length;
       console.log(`\nSeed ${seed}: ${s.endReason} (Jahr ${s.year}) Schlachten=${battles} Intrigen-Skandale=${intrigues}`);
       for (const p of s.players) {
-        const promos = s.chronicle.filter((c) => c.text.startsWith(p.name + ' wurde zum')).map((c) => `${c.year}`).join(',');
+        const promos = s.chronicle.filter((c) => c.text.startsWith(p.name + ' wurde zu')).map((c) => `${c.year}`).join(',');
         console.log(
           `  ${p.name.padEnd(12)} ${TITLES[p.title].padEnd(9)} land=${p.land} pop=${p.population} gold=${Math.round(p.gold)} sav=${p.savings} debt=${Math.round(totalDebt(p))} b=${JSON.stringify(p.buildings)} kn=${p.military.knights} merc=${p.military.mercenaries} promos=${promos}`,
         );

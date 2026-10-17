@@ -27,6 +27,7 @@ export interface PublicInfo {
   regentName: string;
   color: string;
   title: number;
+  female?: boolean;
   isAI: boolean;
   land: number;
   population: number;
@@ -45,6 +46,7 @@ export function publicInfo(p: Player): PublicInfo {
     regentName: p.regentName,
     color: p.color,
     title: p.title,
+    female: p.female,
     isAI: p.isAI,
     land: roundTo(p.land, 500),
     population: roundTo(p.population, 100),
