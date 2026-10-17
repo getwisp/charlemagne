@@ -3,6 +3,8 @@
 Rundenbasierte Wirtschaftssimulation im Heiligen Römischen Reich (18. Jh.) mit Retro-Windows-95/98-Oberfläche.
 Einzelspieler gegen KI sowie Hot-Seat- bzw. asynchroner Mehrspieler für bis zu 9 Spieler.
 
+Jeder Push auf `main` wird automatisch getestet und auf GitHub Pages veröffentlicht (`.github/workflows/deploy.yml`; einmalig unter *Settings → Pages* die Quelle „GitHub Actions“ wählen).
+
 ```bash
 npm install
 npm run dev        # Entwicklungsserver (http://localhost:5173)
