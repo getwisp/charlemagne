@@ -10,7 +10,7 @@ import {
   JUSTICE_DEFENSE,
   ROB_CASH_SHARE,
   ROB_TAX_SHARE,
-  TITLES,
+  titleName,
 } from './constants';
 import { breakTreaties } from './diplomacy';
 import { calculateTaxes, cityCount, totalDebt } from './economy';
@@ -42,14 +42,13 @@ const MISSION_GRUDGE: Record<CovertMission, number> = {
   assassinate: GRUDGE.assassination,
 };
 
-const REGENT_NAMES = [
-  'Friedrich', 'Wilhelm', 'Karl', 'Ludwig', 'Maximilian', 'Leopold', 'Georg', 'August',
-  'Maria', 'Theresia', 'Sophie', 'Elisabeth', 'Charlotte', 'Luise', 'Amalie', 'Johann',
-];
+// Nachfolger tragen dieselbe Titelform wie das Haus (Gräfin bleibt Gräfin).
+const REGENT_NAMES = ['Friedrich', 'Wilhelm', 'Karl', 'Ludwig', 'Maximilian', 'Leopold', 'Georg', 'August', 'Johann'];
+const REGENT_NAMES_F = ['Maria', 'Theresia', 'Sophie', 'Elisabeth', 'Charlotte', 'Luise', 'Amalie', 'Mathilde'];
 
 function spyReport(t: Player): string {
   return [
-    `Titel: ${TITLES[t.title]} · Regent: ${t.regentName}`,
+    `Titel: ${titleName(t.title, t.female)} · ${t.female ? 'Regentin' : 'Regent'}: ${t.regentName}`,
     `Gold: ${fmt(t.gold)} Taler · Sparkonto: ${fmt(t.savings)} · Schulden: ${fmt(totalDebt(t))}`,
     `Korn: ${fmt(t.grain)} Scheffel · Land: ${fmt(t.land)} ha · Bevölkerung: ${fmt(t.population)}`,
     `Märkte: ${t.buildings.market} · Mühlen: ${t.buildings.mill} · Städte: ${cityCount(t.buildings)} · Paläste: ${t.buildings.palace} · Kathedralen: ${t.buildings.cathedral}`,
@@ -155,14 +154,15 @@ export function resolveCovert(s: GameState, a: CovertAction): boolean {
       if (killed) {
         const old = target.regentName;
         target.generation += 1;
-        target.regentName = REGENT_NAMES[Math.floor(randFloat(s, 0, REGENT_NAMES.length))] + ' ' + romanNumeral(target.generation);
+        const names = target.female ? REGENT_NAMES_F : REGENT_NAMES;
+        target.regentName = names[Math.floor(randFloat(s, 0, names.length))] + ' ' + romanNumeral(target.generation);
         tell(s, from.id, 'Attentat geglückt', `${old} von ${target.name} ist tot.`, 'good');
-        tell(s, target.id, 'Attentat!', `${old} wurde ermordet. Euer Erbe ${target.regentName} besteigt den Thron.`, 'error');
+        tell(s, target.id, 'Attentat!', `${old} wurde ermordet. ${target.female ? 'Eure Erbin' : 'Euer Erbe'} ${target.regentName} besteigt den Thron.`, 'error');
         chronicle(s, `${old} (${target.name}) fiel einem Attentat zum Opfer.`);
-        demote(s, target, 'Der Erbe muss seinen Rang erst beweisen.');
+        demote(s, target, target.female ? 'Die Erbin muss ihren Rang erst beweisen.' : 'Der Erbe muss seinen Rang erst beweisen.');
       } else {
         target.sickbed = 1;
-        tell(s, from.id, 'Attentat halb geglückt', `Der Regent von ${target.name} überlebte schwer verwundet und liegt ein Jahr im Krankenbett.`, 'good');
+        tell(s, from.id, 'Attentat halb geglückt', `${target.female ? 'Die Regentin' : 'Der Regent'} von ${target.name} überlebte schwer verwundet und liegt ein Jahr im Krankenbett.`, 'good');
         tell(s, target.id, 'Attentat!', 'Ein Attentäter hat Euch schwer verwundet. Ihr müsst ein Jahr das Krankenbett hüten – Eure Verwalter führen die Geschäfte unverändert fort.', 'error');
         chronicle(s, `Anschlag auf den Regenten von ${target.name}.`);
       }

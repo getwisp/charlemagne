@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { actions, COVERT, COVERT_MIN_GOLD, covertChance, TITLES, type CovertMission, type SabotageTarget } from '../../engine';
+import { actions, COVERT, COVERT_MIN_GOLD, covertChance, titleName, type CovertMission, type SabotageTarget } from '../../engine';
 import { GroupBox, n, NumberField } from '../components/controls';
 import { useGame } from '../context';
 import { PixelIcon } from '../icons';
@@ -41,7 +41,7 @@ export function TavernWindow() {
             <input type="radio" name="mission" checked={mission === m} onChange={() => setMission(m)} />
             <b>{COVERT[m].name}</b>
             <span className="muted">
-              (ab {TITLES[COVERT[m].minTitle]}) – {COVERT[m].description}
+              (ab {titleName(COVERT[m].minTitle, me.female)}) – {COVERT[m].description}
             </span>
           </label>
         ))}
@@ -50,7 +50,7 @@ export function TavernWindow() {
           <select className="input" value={target} onChange={(e) => setTarget(e.target.value)} aria-label="Ziel">
             {rivals.map((r) => (
               <option key={r.id} value={r.id}>
-                {TITLES[r.title]} {r.name}
+                {titleName(r.title, r.female)} {r.name}
               </option>
             ))}
           </select>
@@ -80,7 +80,7 @@ export function TavernWindow() {
             disabled={!canAct || locked || !t}
             onClick={() => act((s) => actions.queueCovert(s, me.id, target, mission, gold, mission === 'sabotage' ? sabotage : undefined))}
           >
-            {locked ? `Erst ab ${TITLES[def.minTitle]}` : 'Auftrag erteilen'}
+            {locked ? `Erst ab ${titleName(def.minTitle, me.female)}` : 'Auftrag erteilen'}
           </button>
         </div>
       </GroupBox>

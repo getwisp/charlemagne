@@ -19,7 +19,7 @@ import {
   SELL_SPREAD,
   T,
   TAX_LIMITS,
-  TITLES,
+  titleName,
   TREATIES,
   TREATY_YEARS,
   UNITS,
@@ -105,7 +105,7 @@ export const mut = {
     const p = actor(s, pid);
     const n = int(count);
     const def = BUILDINGS[type];
-    if (p.title < def.minTitle) throw new ActionError(`${def.name} erfordert mindestens den Titel ${TITLES[def.minTitle]}.`);
+    if (p.title < def.minTitle) throw new ActionError(`${def.name} erfordert mindestens den Titel ${titleName(def.minTitle, p.female)}.`);
     if (freeLand(p) < n * HECTARES_PER_BUILDING)
       throw new ActionError(`Jedes Gebäude benötigt ${HECTARES_PER_BUILDING.toLocaleString('de-DE')} ha freies Land.`);
     pay(p, n * def.cost);
@@ -170,7 +170,7 @@ export const mut = {
     const p = actor(s, pid);
     const n = int(count);
     const def = UNITS[unit];
-    if (p.title < def.minTitle) throw new ActionError(`${def.plural} erfordern mindestens den Titel ${TITLES[def.minTitle]}.`);
+    if (p.title < def.minTitle) throw new ActionError(`${def.plural} erfordern mindestens den Titel ${titleName(def.minTitle, p.female)}.`);
     if (def.fromPopulation && n > p.population * 0.2)
       throw new ActionError('So viele wehrfähige Männer gibt Eure Bevölkerung nicht her.');
     pay(p, n * def.cost);
@@ -254,7 +254,7 @@ export const mut = {
     const t = getPlayer(s, target);
     if (t.id === p.id) throw new ActionError('Ihr könnt nicht gegen Euch selbst intrigieren.');
     const def = COVERT[mission];
-    if (p.title < def.minTitle) throw new ActionError(`${def.name} erfordert mindestens den Titel ${TITLES[def.minTitle]}.`);
+    if (p.title < def.minTitle) throw new ActionError(`${def.name} erfordert mindestens den Titel ${titleName(def.minTitle, p.female)}.`);
     const g = int(gold, 'Summe');
     if (g < COVERT_MIN_GOLD) throw new ActionError(`Mindesteinsatz: ${COVERT_MIN_GOLD} Taler.`);
     pay(p, g);

@@ -9,7 +9,7 @@ import {
   expectedHarvest,
   grainNeed,
   HECTARES_PER_BUILDING,
-  TITLES,
+  titleName,
   type GameState,
   type HeraldMessage,
   type HistoryEntry,
@@ -308,7 +308,7 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
         <div className="sb-body">
           <div style={{ fontWeight: 'bold', color: me.color, fontSize: 13 }}>{me.name}</div>
           <div className="muted" style={{ marginTop: -3 }}>
-            {TITLES[me.title]} · Regent: {me.regentName}
+            {titleName(me.title, me.female)} · {me.female ? 'Regentin' : 'Regent'}: {me.regentName}
           </div>
           {blocked && (
             <div className="sunken" style={{ background: '#ffffe1', padding: 4 }}>

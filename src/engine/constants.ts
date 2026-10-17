@@ -12,6 +12,27 @@ export const TITLES = [
   'Kaiser',
 ] as const;
 
+/** Weibliche Titelformen, gleiche Reihenfolge wie TITLES. */
+export const TITLES_F = ['Edle', 'Freifrau', 'Baronin', 'Gräfin', 'Fürstin', 'Herzogin', 'Kurfürstin', 'Königin', 'Kaiserin'] as const;
+
+/** Titel in der passenden Form – ohne Angabe die männliche (z. B. für allgemeine Voraussetzungen). */
+export function titleName(level: number, female?: boolean): string {
+  return (female ? TITLES_F : TITLES)[level];
+}
+
+/** „zum Grafen“ / „zur Gräfin“ – Dativ mit Artikel für Erhebungen und Rückstufungen. */
+export function zumTitel(level: number, female?: boolean): string {
+  return female ? `zur ${TITLES_F[level]}` : `zum ${TITLES_DAT[level]}`;
+}
+
+/** „eines Grafen“ / „einer Gräfin“ – Genitiv mit Artikel. */
+export function einesTitels(level: number, female?: boolean): string {
+  return female ? `einer ${TITLES_F[level]}` : `eines ${TITLES_GEN[level]}`;
+}
+
+const TITLES_DAT = ['Edlen', 'Freiherrn', 'Baron', 'Grafen', 'Fürsten', 'Herzog', 'Kurfürsten', 'König', 'Kaiser'];
+const TITLES_GEN = ['Edlen', 'Freiherrn', 'Barons', 'Grafen', 'Fürsten', 'Herzogs', 'Kurfürsten', 'Königs', 'Kaisers'];
+
 export const T = {
   EDLER: 0,
   FREIHERR: 1,

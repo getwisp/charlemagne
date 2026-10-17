@@ -33,6 +33,9 @@ import {
   resolveYear,
   T,
   concludeTreaty,
+  titleName,
+  zumTitel,
+  publicInfo,
   aiVote,
   treatiesBetween,
   TRADE_TREATY_BONUS,
@@ -496,6 +499,17 @@ describe('Ereignis-Deck (Shuffle-Bag)', () => {
 });
 
 describe('Titel', () => {
+  it('weibliche Titelformen samt Grammatik', () => {
+    expect(titleName(T.GRAF, true)).toBe('Gräfin');
+    expect(titleName(T.GRAF)).toBe('Graf');
+    expect(zumTitel(T.GRAF, true)).toBe('zur Gräfin');
+    expect(zumTitel(T.GRAF)).toBe('zum Grafen');
+    const s = newGame({ seed: 2, players: [{ name: 'Caterina', isAI: false, female: true }] });
+    const p = s.players[0];
+    p.title = T.FREIHERR;
+    expect(publicInfo(p).female).toBe(true);
+  });
+
   it('max. eine Beförderung pro Runde, alle Bedingungen gleichzeitig', () => {
     const s = game();
     const p = s.players[0];

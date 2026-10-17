@@ -120,6 +120,8 @@ export interface Player {
   color: string;
   isAI: boolean;
   archetype: Archetype | null;
+  /** Weibliche Titelformen (Gräfin, Königin …); fehlt in älteren Spielständen = männlich. */
+  female?: boolean;
   title: number;
 
   gold: number;

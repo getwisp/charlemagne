@@ -65,7 +65,7 @@ export function Resolving({ state, onDone }: { state: GameState; onDone: (s: Gam
         <div>
           {current ? (
             <>
-              <b>{current.name}</b> ({ARCHETYPES[current.archetype ?? 'pfeffersack'].name}) grübelt über seinen Zug…
+              <b>{current.name}</b> ({ARCHETYPES[current.archetype ?? 'pfeffersack'].name}) grübelt über {current.female ? 'ihren' : 'seinen'} Zug…
             </>
           ) : (
             <>Der Reichskanzler wertet Intrigen, Schlachten und Ernten aus…</>
