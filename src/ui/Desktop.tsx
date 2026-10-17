@@ -19,6 +19,7 @@ import { BossScreen } from './BossScreen';
 import { n } from './components/controls';
 import { ContextMenu, type MenuEntry } from './components/Menu';
 import { Alert, Modal, SEVERITY_ICON, Window } from './components/Window';
+import { AboutDialog } from './AboutDialog';
 import { DisplayProperties } from './DisplayProperties';
 import { StartMenu } from './StartMenu';
 import { onSoundChange, playSound, setSoundEnabled, soundEnabled } from './sound';
@@ -107,6 +108,7 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
   const [menu, setMenu] = useState<{ x: number; y: number; kind: 'desktop' | 'taskbar' } | null>(null);
   const [displayProps, setDisplayProps] = useState(false);
   const [confirmQuit, setConfirmQuit] = useState(false);
+  const [about, setAbout] = useState(false);
   const clock = useClock();
   const sound = useSoundSetting();
 
@@ -513,6 +515,7 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
           ]}
           items={[
             { label: 'Hilfe', icon: 'help', onClick: () => openWindow('help') },
+            { label: 'Über Karl 98…', icon: 'castle', onClick: () => setAbout(true) },
             { label: 'Boss-&Taste (F2)', icon: 'spreadsheet', onClick: () => setBoss(true) },
             'sep',
             { label: 'Beenden…', icon: 'door', onClick: () => setConfirmQuit(true) },
@@ -533,6 +536,7 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
         />
       )}
       {displayProps && <DisplayProperties onClose={() => setDisplayProps(false)} />}
+      {about && <AboutDialog onClose={() => setAbout(false)} />}
       {confirmQuit && (
         <Modal title="Karl 98 beenden" icon="door" width={380} onClose={() => setConfirmQuit(false)}>
           <div className="alert-body">

@@ -130,7 +130,7 @@ export function resolveElection(s: GameState): ElectionResult | null {
     winner.title = T.KAISER;
     s.winnerId = winner.id;
     s.phase = 'ended';
-    s.endReason = `${winner.name} wurde mit ${top[1]} von ${ELECTION_SEATS} Stimmen zum Kaiser gewählt!`;
+    s.endReason = `${winner.name} wurde mit ${top[1]} von ${ELECTION_SEATS} Stimmen zum Kaiser gewählt und im Aachener Dom auf dem Thron Karls des Großen gekrönt!`;
     chronicle(s, s.endReason);
     for (const p of s.players)
       tell(s, p.id, 'Habemus Imperatorem!', s.endReason, p.id === winner.id ? 'good' : 'warning');

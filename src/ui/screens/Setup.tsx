@@ -12,7 +12,7 @@ interface Slot {
   archetype: Archetype;
 }
 
-const DEFAULT_NAMES = ['Karl von Habsburg', 'Hanse von Lübeck', 'Albrecht von Wallenstein', 'Caterina de Medici', 'Clemens von Würzburg', 'Sophie von Hannover', 'August von Sachsen', 'Max von Bayern', 'Luise von Preußen'];
+const DEFAULT_NAMES = ['Carolus Magnus', 'Hanse von Lübeck', 'Albrecht von Wallenstein', 'Caterina de Medici', 'Clemens von Würzburg', 'Sophie von Hannover', 'August von Sachsen', 'Max von Bayern', 'Luise von Preußen'];
 const ARCH_ORDER: Archetype[] = ['pfeffersack', 'kriegstreiber', 'raenkeschmiedin', 'kirchenfuerst'];
 
 function defaultSlots(): Slot[] {
@@ -61,7 +61,7 @@ export function Setup({ onStart, onLoad }: { onStart: (p: PlayerSetup[], endYear
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 4 }}>Karl 98</div>
           <div className="hint">
-            Heiliges Römisches Reich, Anno 1700. Vom einfachen Edlen bis zur Kaiserkrone – durch kluge Wirtschaft, Lehnswesen, Intrigen
+            Heiliges Römisches Reich, Anno 1700 – fast ein Jahrtausend nach Carolus Magnus. Vom einfachen Edlen bis zur Kaiserkrone – durch kluge Wirtschaft, Lehnswesen, Intrigen
             und Bestechung. Bis zu 9 Spieler: Hot-Seat am selben Rechner oder asynchron per Spielstand-Datei.
           </div>
         </div>

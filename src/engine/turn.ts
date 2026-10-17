@@ -111,7 +111,7 @@ export function newGame(opts: NewGameOptions): GameState {
     idCounter: 0,
   };
   s.eventBag = freshEventBag(s);
-  chronicle(s, `Anno ${s.year}: ${s.players.length} Edle ringen um die Gunst des Reiches.`);
+  chronicle(s, `Anno ${s.year}: ${s.players.length} Edle ringen um die Krone, die einst Karl der Große trug.`);
   beginYear(s, true);
   return s;
 }

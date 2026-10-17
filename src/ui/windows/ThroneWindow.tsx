@@ -92,7 +92,7 @@ function TitleTab() {
             : 'Baut eine Kathedrale, damit der Reichstag zur Kaiserwahl einberufen wird.'}
         </GroupBox>
       ) : (
-        <GroupBox label="Kaiser">Ihr tragt die Kaiserkrone!</GroupBox>
+        <GroupBox label="Kaiser">Ihr tragt die Kaiserkrone und sitzt auf dem Thron Karls des Großen.</GroupBox>
       )}
       {me.casusBelli.length > 0 && (
         <div className="sunken field" style={{ padding: 6 }}>
