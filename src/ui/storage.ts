@@ -40,7 +40,7 @@ export function downloadSave(state: GameState): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `kaiser-klon-anno-${state.year}.json`;
+  a.download = `karl98-anno-${state.year}.json`;
   document.body.appendChild(a);
   a.click();
   a.remove();

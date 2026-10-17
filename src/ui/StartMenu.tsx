@@ -32,7 +32,7 @@ export function StartMenu({ folders, items, onClose }: StartMenuProps) {
   return (
     <div ref={ref} className="start-menu raised" role="menu" onPointerDown={(e) => e.stopPropagation()}>
       <div className="stripe">
-        <b>Kaiser-Klon</b> 98
+        <b>Karl</b> 98
       </div>
       <ul onKeyDown={menuKeys}>
         {folders.map((f) => (

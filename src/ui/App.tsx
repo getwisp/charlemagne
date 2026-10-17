@@ -68,7 +68,7 @@ export function App() {
 
   // Fenstertitel zeigt das Jahr
   useEffect(() => {
-    document.title = game ? `Kaiser-Klon – Anno ${game.year}` : 'Kaiser-Klon';
+    document.title = game ? `Karl 98 – Anno ${game.year}` : 'Karl 98';
   }, [game]);
 
   let content: React.ReactNode = null;
@@ -108,7 +108,7 @@ export function App() {
   return (
     <>
       {content}
-      {error && <Alert title="Kaiser-Klon" text={error} severity="error" onOk={() => setError(null)} />}
+      {error && <Alert title="Karl 98" text={error} severity="error" onOk={() => setError(null)} />}
       <TooltipLayer />
       <ScreensaverHost />
     </>

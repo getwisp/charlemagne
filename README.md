@@ -1,4 +1,4 @@
-# Projekt Kaiser-Klon
+# Karl 98
 
 Rundenbasierte Wirtschaftssimulation im Heiligen Römischen Reich (18. Jh.) mit Retro-Windows-95/98-Oberfläche.
 Einzelspieler gegen KI sowie Hot-Seat- bzw. asynchroner Mehrspieler für bis zu 9 Spieler.
@@ -12,6 +12,8 @@ SIM_REPORT=1 npm run sim   # Balancing-Report: 5 komplette KI-Partien
 SIM_SUMMARY=30 npm run sim # Siege und Ø-Endtitel je Archetyp über 30 Seeds
 SIM_ECON=30 npm run sim:econ # Einnahmen, Sold, Taverne-Rendite, Kriege je Archetyp
 SIM_INCOME=30 npm run sim:econ # Steuern nach Art, Kornhandel, Landkauf, Bauten, Beute, Endbestand
+SIM_DECADES=240 npm run sim:econ # Wirtschaftsverlauf je Archetyp in Zehnjahres-Schritten (SIM_DECADES_PLAYERS=9 für große Runden)
+SIM_SETUPS=60 npm run sim  # Robustheit über 14 Aufstellungen (1–9 Fürsten)
 ```
 
 ## Architektur

@@ -1,9 +1,9 @@
 {
-  "name": "kaiser-klon",
+  "name": "karl-98",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Projekt Kaiser-Klon – rundenbasierte Wirtschaftssimulation im Heiligen Römischen Reich (Win95-Stil)",
+  "description": "Karl 98 – rundenbasierte Wirtschaftssimulation im Heiligen Römischen Reich (Win95-Stil)",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

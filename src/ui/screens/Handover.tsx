@@ -6,7 +6,7 @@ import { PixelIcon } from '../icons';
 export function Handover({ state, player, onReady }: { state: GameState; player: Player; onReady: () => void }) {
   const unread = state.messages[player.id]?.length ?? 0;
   return (
-    <Modal title="Willkommen bei Kaiser-Klon" icon="key" width={400} opaque>
+    <Modal title="Willkommen bei Karl 98" icon="key" width={400} opaque>
       <div style={{ display: 'flex', gap: 14, padding: '6px 4px' }}>
         <PixelIcon name="key" size={48} />
         <div>

@@ -1,4 +1,4 @@
-// Zentrales Datenmodell des Kaiser-Klons.
+// Zentrales Datenmodell von Karl 98.
 // Der gesamte Spielzustand ist serialisierbares JSON, damit er als
 // Spielstand (localStorage / Datei) für Hot-Seat- und asynchrone Partien taugt.
 

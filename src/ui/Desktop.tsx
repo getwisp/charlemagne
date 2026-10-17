@@ -534,7 +534,7 @@ export function Desktop({ onEndTurn, onReset, onLoad, onQuit, setRaw }: DesktopP
       )}
       {displayProps && <DisplayProperties onClose={() => setDisplayProps(false)} />}
       {confirmQuit && (
-        <Modal title="Kaiser-Klon beenden" icon="door" width={380} onClose={() => setConfirmQuit(false)}>
+        <Modal title="Karl 98 beenden" icon="door" width={380} onClose={() => setConfirmQuit(false)}>
           <div className="alert-body">
             <div className="alert-icon">
               <PixelIcon name="castle" size={32} />

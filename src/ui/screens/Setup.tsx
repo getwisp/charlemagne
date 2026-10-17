@@ -55,11 +55,11 @@ export function Setup({ onStart, onLoad }: { onStart: (p: PlayerSetup[], endYear
   }
 
   return (
-    <Modal title="Kaiser-Klon Setup" icon="castle" width={620} opaque>
+    <Modal title="Karl 98 – Setup" icon="castle" width={620} opaque>
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
         <PixelIcon name="castle" size={64} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 4 }}>Projekt Kaiser-Klon</div>
+          <div style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 4 }}>Karl 98</div>
           <div className="hint">
             Heiliges Römisches Reich, Anno 1700. Vom einfachen Edlen bis zur Kaiserkrone – durch kluge Wirtschaft, Lehnswesen, Intrigen
             und Bestechung. Bis zu 9 Spieler: Hot-Seat am selben Rechner oder asynchron per Spielstand-Datei.
